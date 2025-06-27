@@ -71,11 +71,11 @@ class TextProcessor:
         self.nlp = spacy.load("en_core_web_sm")
         self.sentiment_analyzer = SentimentAnalyzer()
         self.topic_modeler = TopicModeler()
-        
+
     def process_text(self, text):
         # Clean and preprocess text
         cleaned_text = self.clean_text(text)
-        
+
         # Extract features
         features = {
             'sentiment': self.sentiment_analyzer.analyze(cleaned_text),
@@ -94,13 +94,13 @@ class SentimentAnalyzer:
         self.vader = SentimentIntensityAnalyzer()
         self.textblob = TextBlob
         self.transformer_model = pipeline("sentiment-analysis")
-        
+
     def analyze(self, text):
         # Multi-model sentiment analysis
         vader_scores = self.vader.polarity_scores(text)
         textblob_scores = self.textblob(text).sentiment
         transformer_scores = self.transformer_model(text)
-        
+
         # Ensemble scoring
         return self.ensemble_score(vader_scores, textblob_scores, transformer_scores)
 ```
@@ -115,10 +115,10 @@ class MLPipeline:
             'content_classifier': ContentClassifier(),
             'user_classifier': UserClassifier()
         }
-    
+
     def train_models(self, training_data):
         # Train all ML models
-        
+
     def predict(self, data, model_name):
         features = self.feature_extractor.extract(data)
         return self.models[model_name].predict(features)
@@ -204,20 +204,20 @@ text_processing:
   remove_urls: true
   remove_mentions: true
   remove_hashtags: false
-  
+
 sentiment_analysis:
   models: ["vader", "textblob", "roberta"]
   ensemble_method: "weighted_average"
   weights: [0.3, 0.3, 0.4]
   batch_size: 100
-  
+
 topic_modeling:
   algorithm: "lda"
   num_topics: 20
   min_doc_frequency: 5
   max_doc_frequency: 0.8
   update_frequency: "daily"
-  
+
 machine_learning:
   models:
     popularity_predictor:
@@ -272,26 +272,30 @@ backend/
 
 ## Dependencies Updates
 
-### NLP and ML Dependencies
-```
-spacy>=3.4.0
-nltk>=3.7
-textblob>=0.17.0
-vaderSentiment>=3.3.0
-scikit-learn>=1.1.0
-transformers>=4.20.0
-torch>=1.12.0
-gensim>=4.2.0
+### NLP and ML Dependencies (pyproject.toml)
+```toml
+[project.optional-dependencies]
+data-processing = [
+    "spacy>=3.4.0",
+    "nltk>=3.7",
+    "textblob>=0.17.0",
+    "vaderSentiment>=3.3.0",
+    "scikit-learn>=1.1.0",
+    "transformers>=4.20.0",
+    "torch>=1.12.0",
+    "gensim>=4.2.0",
+    "pandas>=1.4.0",
+    "numpy>=1.21.0",
+    "scipy>=1.8.0",
+    "statsmodels>=0.13.0",
+    "plotly>=5.9.0",
+    "seaborn>=0.11.0"
+]
 ```
 
-### Data Analysis Dependencies
-```
-pandas>=1.4.0
-numpy>=1.21.0
-scipy>=1.8.0
-statsmodels>=0.13.0
-plotly>=5.9.0
-seaborn>=0.11.0
+### Installation
+```bash
+uv sync --extra data-processing
 ```
 
 ## Processing Tasks & Scheduling
@@ -301,19 +305,19 @@ seaborn>=0.11.0
 @celery.task(bind=True)
 def process_text_batch(self, text_data_batch):
     # Process batch of texts for NLP analysis
-    
+
 @celery.task(bind=True)
 def calculate_sentiment_trends(self, subreddit_name, time_period):
     # Calculate sentiment trends for subreddit
-    
+
 @celery.task(bind=True)
 def update_topic_models(self, subreddit_name):
     # Update topic models with new data
-    
+
 @celery.task(bind=True)
 def train_ml_models(self, model_type, training_config):
     # Train or retrain ML models
-    
+
 @celery.task(bind=True)
 def calculate_user_metrics(self, user_batch):
     # Calculate user engagement and influence metrics
@@ -325,11 +329,11 @@ def calculate_user_metrics(self, user_batch):
 @celery.beat.schedule("daily-text-processing")
 def daily_text_processing():
     # Process all new text content from past 24 hours
-    
+
 @celery.beat.schedule("daily-metrics-calculation")
 def daily_metrics_calculation():
     # Update all metrics and analytics
-    
+
 # Weekly model updates
 @celery.beat.schedule("weekly-model-training")
 def weekly_model_training():

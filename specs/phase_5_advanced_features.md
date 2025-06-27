@@ -77,7 +77,7 @@ class AdvancedAnalyticsEngine:
         self.network_analyzer = NetworkAnalyzer()
         self.influence_modeler = InfluenceModeler()
         self.anomaly_detector = AnomalyDetector()
-        
+
     async def analyze_trends(self, subreddit, timeframe):
         # Implement advanced trend analysis
         historical_data = await self.get_historical_data(subreddit, timeframe)
@@ -88,7 +88,7 @@ class AdvancedAnalyticsEngine:
             'confidence': confidence,
             'factors': self.identify_trend_factors(historical_data)
         }
-        
+
     async def analyze_network(self, interaction_data):
         # Build and analyze user interaction networks
         network = self.network_analyzer.build_network(interaction_data)
@@ -112,18 +112,18 @@ class RealTimeStreamer:
     def __init__(self):
         self.redis = Redis()
         self.active_connections = {}
-        
+
     async def stream_data(self, stream_key: str, callback):
         while True:
             messages = await self.redis.xread({stream_key: '$'}, block=1000)
             for stream, msgs in messages:
                 for msg_id, fields in msgs:
                     await callback(fields)
-                    
+
     async def broadcast_update(self, channel: str, data: dict):
         for connection in self.active_connections.get(channel, []):
             await connection.send_json(data)
-            
+
     @app.websocket("/ws/realtime/{channel}")
     async def websocket_endpoint(websocket: WebSocket, channel: str):
         await self.connect(websocket, channel)
@@ -140,16 +140,16 @@ class WorkflowEngine:
     def __init__(self):
         self.components = self.load_components()
         self.executor = WorkflowExecutor()
-        
+
     async def execute_workflow(self, workflow_definition: dict):
         workflow = Workflow.from_definition(workflow_definition)
         context = WorkflowContext()
-        
+
         for step in workflow.steps:
             component = self.components[step.component_type]
             result = await component.execute(step.parameters, context)
             context.add_result(step.id, result)
-            
+
         return context.get_final_result()
 
 class WorkflowComponent(ABC):
@@ -255,11 +255,11 @@ class AIInsightsGenerator:
         self.nlg_model = NaturalLanguageGenerator()
         self.pattern_detector = PatternDetector()
         self.recommendation_engine = RecommendationEngine()
-        
+
     async def generate_insights(self, analysis_results: dict):
         # Extract key patterns and trends
         patterns = self.pattern_detector.detect(analysis_results)
-        
+
         # Generate natural language insights
         insights = []
         for pattern in patterns:
@@ -271,15 +271,15 @@ class AIInsightsGenerator:
                 'data_points': pattern.supporting_data,
                 'recommendations': self.recommendation_engine.get_recommendations(pattern)
             })
-            
+
         return insights
-        
+
     async def generate_automated_report(self, data: dict):
         # Create comprehensive natural language report
         template = await self.select_report_template(data)
         insights = await self.generate_insights(data)
         summary = await self.nlg_model.generate_summary(insights)
-        
+
         return {
             'executive_summary': summary,
             'key_insights': insights,
@@ -368,33 +368,32 @@ frontend/
 
 ## Dependencies Updates
 
-### Advanced Analytics Dependencies
-```
-networkx>=2.8
-scikit-network>=0.29
-prophet>=1.1
-pystan>=3.4
-plotly>=5.10
-bokeh>=2.4
-networkx>=2.8
-community>=0.16
+### Advanced Features Dependencies (pyproject.toml)
+```toml
+[project.optional-dependencies]
+advanced-features = [
+    "networkx>=2.8",
+    "scikit-network>=0.29",
+    "prophet>=1.1",
+    "pystan>=3.4",
+    "plotly>=5.10",
+    "bokeh>=2.4",
+    "community>=0.16",
+    "openai>=0.23",
+    "transformers>=4.21",
+    "torch>=1.12",
+    "sentence-transformers>=2.2",
+    "spacy-transformers>=1.1",
+    "redis[streams]>=4.3",
+    "websockets>=10.3",
+    "python-socketio>=5.7",
+    "eventlet>=0.33"
+]
 ```
 
-### AI and NLP Dependencies
-```
-openai>=0.23
-transformers>=4.21
-torch>=1.12
-sentence-transformers>=2.2
-spacy-transformers>=1.1
-```
-
-### Real-time Dependencies
-```
-redis[streams]>=4.3
-websockets>=10.3
-python-socketio>=5.7
-eventlet>=0.33
+### Installation
+```bash
+uv sync --extra advanced-features
 ```
 
 ## Advanced Features Implementation
@@ -405,7 +404,7 @@ class AlertSystem:
     def __init__(self):
         self.alert_rules = AlertRuleEngine()
         self.notification_service = NotificationService()
-        
+
     async def check_alerts(self, new_data: dict):
         triggered_alerts = []
         for rule in self.alert_rules.get_active_rules():
@@ -420,7 +419,7 @@ class AlertRule:
         self.condition = condition
         self.threshold = threshold
         self.channels = notification_channels
-        
+
     def evaluate(self, data: dict) -> bool:
         # Implement rule evaluation logic
         pass
@@ -447,14 +446,14 @@ interface CustomDashboard {
 const DashboardBuilder: React.FC = () => {
   const [dashboard, setDashboard] = useState<CustomDashboard>();
   const [isEditing, setIsEditing] = useState(false);
-  
+
   const handleComponentAdd = (component: DashboardComponent) => {
     setDashboard(prev => ({
       ...prev,
       components: [...prev.components, component]
     }));
   };
-  
+
   return (
     <DragDropContext onDragEnd={handleDragEnd}>
       <DashboardCanvas>

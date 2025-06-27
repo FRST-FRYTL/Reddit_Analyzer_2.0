@@ -76,80 +76,65 @@ Finalize the application with performance optimization, security hardening, comp
 ## Technical Specifications
 
 ### Production Architecture
-```yaml
-# docker-compose.prod.yml
-version: '3.8'
-services:
-  nginx:
-    image: nginx:alpine
-    ports:
-      - "80:80"
-      - "443:443"
-    volumes:
-      - ./nginx.conf:/etc/nginx/nginx.conf
-      - ./ssl:/etc/ssl
-    depends_on:
-      - app
-      
-  app:
-    build: ./backend
-    environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/reddit_analyzer
-      - REDIS_URL=redis://redis:6379
-      - APP_ENV=production
-    depends_on:
-      - db
-      - redis
-    deploy:
-      replicas: 3
-      
-  db:
-    image: postgres:14
-    environment:
-      - POSTGRES_DB=reddit_analyzer
-      - POSTGRES_USER=reddit_user
-      - POSTGRES_PASSWORD_FILE=/run/secrets/db_password
-    volumes:
-      - postgres_data:/var/lib/postgresql/data
-      - ./backups:/backups
-    secrets:
-      - db_password
-      
-  redis:
-    image: redis:7-alpine
-    command: redis-server --appendonly yes
-    volumes:
-      - redis_data:/data
-      
-  worker:
-    build: ./backend
-    command: celery -A app.workers.celery_app worker --loglevel=info
-    environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/reddit_analyzer
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - db
-      - redis
-    deploy:
-      replicas: 2
 
-  scheduler:
-    build: ./backend
-    command: celery -A app.workers.celery_app beat --loglevel=info
-    environment:
-      - DATABASE_URL=postgresql://user:pass@db:5432/reddit_analyzer
-      - REDIS_URL=redis://redis:6379
-    depends_on:
-      - db
-      - redis
+#### systemd Services Configuration
+```ini
+# /etc/systemd/system/reddit-analyzer-api.service
+[Unit]
+Description=Reddit Analyzer API
+After=network.target postgresql.service redis.service
 
-volumes:
-  postgres_data:
-  redis_data:
+[Service]
+Type=simple
+User=reddit-analyzer
+Group=reddit-analyzer
+WorkingDirectory=/opt/reddit-analyzer
+Environment=PATH=/opt/reddit-analyzer/.venv/bin
+EnvironmentFile=/opt/reddit-analyzer/.env
+ExecStart=/opt/reddit-analyzer/.venv/bin/uvicorn app.main:app --host 0.0.0.0 --port 8000
+Restart=always
+RestartSec=10
 
-secrets:
-  db_password:
-    file: ./secrets/db_password.txt
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/reddit-analyzer-worker.service
+[Unit]
+Description=Reddit Analyzer Celery Worker
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=reddit-analyzer
+Group=reddit-analyzer
+WorkingDirectory=/opt/reddit-analyzer
+Environment=PATH=/opt/reddit-analyzer/.venv/bin
+EnvironmentFile=/opt/reddit-analyzer/.env
+ExecStart=/opt/reddit-analyzer/.venv/bin/celery -A app.workers.celery_app worker --loglevel=info
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+
+# /etc/systemd/system/reddit-analyzer-scheduler.service
+[Unit]
+Description=Reddit Analyzer Celery Beat Scheduler
+After=network.target postgresql.service redis.service
+
+[Service]
+Type=simple
+User=reddit-analyzer
+Group=reddit-analyzer
+WorkingDirectory=/opt/reddit-analyzer
+Environment=PATH=/opt/reddit-analyzer/.venv/bin
+EnvironmentFile=/opt/reddit-analyzer/.env
+ExecStart=/opt/reddit-analyzer/.venv/bin/celery -A app.workers.celery_app beat --loglevel=info
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
 ```
 
 ### Nginx Configuration
@@ -167,16 +152,16 @@ server {
 server {
     listen 443 ssl http2;
     server_name reddit-analyzer.com;
-    
+
     ssl_certificate /etc/ssl/certs/reddit-analyzer.crt;
     ssl_certificate_key /etc/ssl/private/reddit-analyzer.key;
-    
+
     # Security headers
     add_header X-Frame-Options DENY;
     add_header X-Content-Type-Options nosniff;
     add_header X-XSS-Protection "1; mode=block";
     add_header Strict-Transport-Security "max-age=31536000; includeSubDomains";
-    
+
     # API requests
     location /api/ {
         proxy_pass http://app_backend;
@@ -184,11 +169,11 @@ server {
         proxy_set_header X-Real-IP $remote_addr;
         proxy_set_header X-Forwarded-For $proxy_add_x_forwarded_for;
         proxy_set_header X-Forwarded-Proto $scheme;
-        
+
         # Rate limiting
         limit_req zone=api burst=20 nodelay;
     }
-    
+
     # WebSocket connections
     location /ws/ {
         proxy_pass http://app_backend;
@@ -197,14 +182,14 @@ server {
         proxy_set_header Connection "upgrade";
         proxy_set_header Host $host;
     }
-    
+
     # Static files
     location /static/ {
         alias /var/www/static/;
         expires 1y;
         add_header Cache-Control "public, immutable";
     }
-    
+
     # Frontend application
     location / {
         root /var/www/html;
@@ -244,55 +229,57 @@ jobs:
           --health-interval 10s
           --health-timeout 5s
           --health-retries 5
-          
+
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Set up Python
-        uses: actions/setup-python@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v3
         with:
-          python-version: '3.9'
-          
+          version: "latest"
+
+      - name: Set up Python
+        run: uv python install 3.9
+
       - name: Install dependencies
         run: |
-          pip install -r backend/requirements.txt
-          pip install -r backend/requirements-dev.txt
-          
+          cd backend
+          uv sync --extra dev
+
       - name: Run tests
         run: |
           cd backend
-          pytest tests/ -v --cov=app --cov-report=xml
-          
+          uv run pytest tests/ -v --cov=app --cov-report=xml
+
       - name: Security scan
         run: |
-          pip install bandit safety
-          bandit -r backend/app/
-          safety check
-          
+          cd backend
+          uv add --dev bandit safety
+          uv run bandit -r app/
+          uv run safety check
+
   build:
     needs: test
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - uses: actions/checkout@v3
-      
-      - name: Build Docker images
+
+      - name: Create deployment package
         run: |
-          docker build -t reddit-analyzer-backend ./backend
-          docker build -t reddit-analyzer-frontend ./frontend
-          
-      - name: Push to registry
+          tar -czf reddit-analyzer-${{ github.sha }}.tar.gz backend/ frontend/ deployment/
+
+      - name: Upload to artifact storage
         run: |
-          echo ${{ secrets.DOCKER_PASSWORD }} | docker login -u ${{ secrets.DOCKER_USERNAME }} --password-stdin
-          docker push reddit-analyzer-backend:latest
-          docker push reddit-analyzer-frontend:latest
-          
+          # Upload to S3 or artifact repository
+          echo "Uploading reddit-analyzer-${{ github.sha }}.tar.gz"
+
   deploy:
     needs: build
     runs-on: ubuntu-latest
     if: github.ref == 'refs/heads/main'
-    
+
     steps:
       - name: Deploy to production
         uses: appleboy/ssh-action@v0.1.5
@@ -302,9 +289,25 @@ jobs:
           key: ${{ secrets.PROD_SSH_KEY }}
           script: |
             cd /opt/reddit-analyzer
-            docker-compose -f docker-compose.prod.yml pull
-            docker-compose -f docker-compose.prod.yml up -d
-            docker system prune -f
+            # Download and extract new version
+            wget https://artifacts.example.com/reddit-analyzer-${{ github.sha }}.tar.gz
+            tar -xzf reddit-analyzer-${{ github.sha }}.tar.gz
+
+            # Install dependencies
+            cd backend
+            uv sync
+
+            # Run migrations
+            uv run alembic upgrade head
+
+            # Restart services
+            sudo systemctl restart reddit-analyzer-api
+            sudo systemctl restart reddit-analyzer-worker
+            sudo systemctl restart reddit-analyzer-scheduler
+
+            # Health check
+            sleep 10
+            curl -f http://localhost:8000/health || exit 1
 ```
 
 ### Monitoring Configuration
@@ -316,43 +319,48 @@ global:
 scrape_configs:
   - job_name: 'reddit-analyzer'
     static_configs:
-      - targets: ['app:8000']
+      - targets: ['localhost:8000']
     metrics_path: /metrics
-    
+
   - job_name: 'postgres'
     static_configs:
-      - targets: ['postgres-exporter:9187']
-      
+      - targets: ['localhost:9187']
+
   - job_name: 'redis'
     static_configs:
-      - targets: ['redis-exporter:9121']
+      - targets: ['localhost:9121']
 
-# docker-compose.monitoring.yml
-version: '3.8'
-services:
-  prometheus:
-    image: prom/prometheus:latest
-    ports:
-      - "9090:9090"
-    volumes:
-      - ./prometheus.yml:/etc/prometheus/prometheus.yml
-      
-  grafana:
-    image: grafana/grafana:latest
-    ports:
-      - "3000:3000"
-    environment:
-      - GF_SECURITY_ADMIN_PASSWORD=admin
-    volumes:
-      - grafana_data:/var/lib/grafana
-      - ./grafana/dashboards:/etc/grafana/provisioning/dashboards
-      
-  alertmanager:
-    image: prom/alertmanager:latest
-    ports:
-      - "9093:9093"
-    volumes:
-      - ./alertmanager.yml:/etc/alertmanager/alertmanager.yml
+  - job_name: 'node'
+    static_configs:
+      - targets: ['localhost:9100']
+```
+
+#### Installation Script for Monitoring Stack
+```bash
+#!/bin/bash
+# install-monitoring.sh
+
+# Install Prometheus
+wget https://github.com/prometheus/prometheus/releases/download/v2.40.0/prometheus-2.40.0.linux-amd64.tar.gz
+tar xvfz prometheus-*.tar.gz
+sudo mv prometheus-2.40.0.linux-amd64/prometheus /usr/local/bin/
+sudo mv prometheus-2.40.0.linux-amd64/promtool /usr/local/bin/
+
+# Install Grafana
+wget -q -O - https://packages.grafana.com/gpg.key | sudo apt-key add -
+echo "deb https://packages.grafana.com/oss/deb stable main" | sudo tee -a /etc/apt/sources.list.d/grafana.list
+sudo apt-get update
+sudo apt-get install grafana
+
+# Install exporters
+sudo apt-get install prometheus-node-exporter
+sudo apt-get install prometheus-postgres-exporter
+sudo apt-get install prometheus-redis-exporter
+
+# Start services
+sudo systemctl enable --now prometheus
+sudo systemctl enable --now grafana-server
+sudo systemctl enable --now prometheus-node-exporter
 ```
 
 ### Database Optimization
@@ -365,21 +373,21 @@ CREATE INDEX CONCURRENTLY idx_comments_post_created ON comments(post_id, created
 CREATE INDEX CONCURRENTLY idx_text_analysis_sentiment ON text_analysis(sentiment_score);
 
 -- Partitioning for large tables
-CREATE TABLE posts_y2024m01 PARTITION OF posts 
+CREATE TABLE posts_y2024m01 PARTITION OF posts
 FOR VALUES FROM ('2024-01-01') TO ('2024-02-01');
 
-CREATE TABLE posts_y2024m02 PARTITION OF posts 
+CREATE TABLE posts_y2024m02 PARTITION OF posts
 FOR VALUES FROM ('2024-02-01') TO ('2024-03-01');
 
 -- Materialized views for analytics
 CREATE MATERIALIZED VIEW daily_subreddit_stats AS
-SELECT 
+SELECT
     subreddit_name,
     DATE(created_at) as date,
     COUNT(*) as post_count,
     AVG(score) as avg_score,
     COUNT(DISTINCT author_id) as unique_authors
-FROM posts 
+FROM posts
 GROUP BY subreddit_name, DATE(created_at);
 
 CREATE UNIQUE INDEX ON daily_subreddit_stats (subreddit_name, date);
@@ -388,19 +396,21 @@ CREATE UNIQUE INDEX ON daily_subreddit_stats (subreddit_name, date);
 ## New File Structure Additions
 ```
 deployment/
-├── docker/
-│   ├── Dockerfile.prod
-│   ├── docker-compose.prod.yml
-│   └── docker-compose.monitoring.yml
+├── systemd/
+│   ├── reddit-analyzer-api.service
+│   ├── reddit-analyzer-worker.service
+│   └── reddit-analyzer-scheduler.service
 ├── nginx/
 │   ├── nginx.conf
 │   ├── ssl/
 │   └── sites-available/
 ├── scripts/
+│   ├── install.sh
 │   ├── deploy.sh
 │   ├── backup.sh
 │   ├── restore.sh
-│   └── health-check.sh
+│   ├── health-check.sh
+│   └── install-monitoring.sh
 ├── monitoring/
 │   ├── prometheus.yml
 │   ├── alertmanager.yml
@@ -429,31 +439,84 @@ docs/
     └── contributing.md
 ```
 
+#### Installation Script
+```bash
+#!/bin/bash
+# deployment/scripts/install.sh
+
+set -e
+
+# Create user and directories
+sudo useradd -r -s /bin/false reddit-analyzer
+sudo mkdir -p /opt/reddit-analyzer
+sudo chown reddit-analyzer:reddit-analyzer /opt/reddit-analyzer
+
+# Install system dependencies
+sudo apt-get update
+sudo apt-get install -y postgresql postgresql-contrib redis-server nginx python3-pip
+
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+source $HOME/.cargo/env
+
+# Copy application files
+sudo cp -r ./backend /opt/reddit-analyzer/
+sudo cp -r ./frontend /opt/reddit-analyzer/
+sudo chown -R reddit-analyzer:reddit-analyzer /opt/reddit-analyzer
+
+# Set up virtual environment and install dependencies
+sudo -u reddit-analyzer bash -c "cd /opt/reddit-analyzer/backend && uv sync"
+
+# Set up database
+sudo -u postgres createdb reddit_analyzer
+sudo -u postgres createuser reddit_analyzer
+
+# Copy systemd service files
+sudo cp deployment/systemd/*.service /etc/systemd/system/
+sudo systemctl daemon-reload
+
+# Copy nginx configuration
+sudo cp deployment/nginx/reddit-analyzer.conf /etc/nginx/sites-available/
+sudo ln -s /etc/nginx/sites-available/reddit-analyzer.conf /etc/nginx/sites-enabled/
+
+# Enable and start services
+sudo systemctl enable postgresql redis-server nginx
+sudo systemctl enable reddit-analyzer-api reddit-analyzer-worker reddit-analyzer-scheduler
+
+echo "Installation completed. Configure environment variables and start services."
+```
+
 ## Dependencies Updates
 
-### Production Dependencies
-```
-gunicorn>=20.1.0
-uvicorn[standard]>=0.18.0
-prometheus-client>=0.14.0
-structlog>=22.1.0
-sentry-sdk[fastapi]>=1.9.0
+### Production Dependencies (pyproject.toml)
+```toml
+[project.optional-dependencies]
+prod = [
+    "gunicorn>=20.1.0",
+    "uvicorn[standard]>=0.18.0",
+    "prometheus-client>=0.14.0",
+    "structlog>=22.1.0",
+    "sentry-sdk[fastapi]>=1.9.0",
+    "cryptography>=37.0.0",
+    "bcrypt>=3.2.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "opentelemetry-api>=1.12.0",
+    "opentelemetry-sdk>=1.12.0",
+    "opentelemetry-instrumentation-fastapi>=0.33b0"
+]
 ```
 
-### Security Dependencies
-```
-cryptography>=37.0.0
-bcrypt>=3.2.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-```
+### Installation Commands
+```bash
+# Production environment setup
+uv sync --extra prod
 
-### Monitoring Dependencies
-```
-prometheus-client>=0.14.0
-opentelemetry-api>=1.12.0
-opentelemetry-sdk>=1.12.0
-opentelemetry-instrumentation-fastapi>=0.33b0
+# Development environment
+uv sync --extra dev
+
+# All dependencies
+uv sync --all-extras
 ```
 
 ## Performance Benchmarks
@@ -473,21 +536,21 @@ from locust import HttpUser, task, between
 
 class RedditAnalyzerUser(HttpUser):
     wait_time = between(1, 3)
-    
+
     def on_start(self):
         self.client.post("/api/v1/auth/login", json={
             "username": "test_user",
             "password": "test_password"
         })
-    
+
     @task(3)
     def view_dashboard(self):
         self.client.get("/api/v1/dashboard")
-    
+
     @task(2)
     def get_subreddit_analytics(self):
         self.client.get("/api/v1/subreddits/python/analytics")
-    
+
     @task(1)
     def generate_report(self):
         self.client.post("/api/v1/reports/generate", json={

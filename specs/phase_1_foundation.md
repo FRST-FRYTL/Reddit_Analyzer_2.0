@@ -14,9 +14,9 @@ Establish the foundational infrastructure for the Reddit API data analysis appli
 
 ### Project Setup & Environment Configuration
 - [ ] Initialize Git repository with proper .gitignore
-- [ ] Set up Python virtual environment
-- [ ] Create requirements.txt with initial dependencies
-- [ ] Set up Docker development environment
+- [ ] Install and configure uv package manager
+- [ ] Create pyproject.toml with project configuration
+- [ ] Set up virtual environment using uv
 - [ ] Configure environment variables management (.env files)
 - [ ] Set up pre-commit hooks for code quality
 
@@ -56,12 +56,13 @@ Establish the foundational infrastructure for the Reddit API data analysis appli
 
 ### Technology Stack
 - **Language**: Python 3.9+
+- **Package Manager**: uv (ultra-fast Python package installer)
 - **API Client**: PRAW (Python Reddit API Wrapper)
 - **Database**: PostgreSQL 13+
 - **Cache**: Redis 6+
 - **ORM**: SQLAlchemy
 - **Testing**: pytest, pytest-mock
-- **Environment**: Docker, docker-compose
+- **Environment**: Python virtual environments
 
 ### Project Structure
 ```
@@ -90,14 +91,14 @@ reddit_analyzer/
 │   │   ├── test_reddit_client.py
 │   │   └── test_models.py
 │   ├── alembic/
-│   ├── requirements.txt
-│   ├── .env.example
-│   └── Dockerfile
+│   ├── pyproject.toml
+│   ├── uv.lock
+│   └── .env.example
 ├── database/
-│   ├── init.sql
-│   └── docker-compose.yml
+│   └── init.sql
 ├── scripts/
 │   ├── setup.sh
+│   ├── install_deps.sh
 │   └── test_connection.py
 ├── .gitignore
 ├── .pre-commit-config.yaml
@@ -183,26 +184,169 @@ APP_ENV=development
 LOG_LEVEL=INFO
 ```
 
+## Environment Setup Scripts
+
+### Setup Script (scripts/setup.sh)
+```bash
+#!/bin/bash
+set -e
+
+echo "Setting up Reddit Analyzer development environment..."
+
+# Install system dependencies (Ubuntu/Debian)
+sudo apt-get update
+sudo apt-get install -y python3-dev postgresql postgresql-contrib redis-server
+
+# Install uv if not already installed
+if ! command -v uv &> /dev/null; then
+    echo "Installing uv..."
+    curl -LsSf https://astral.sh/uv/install.sh | sh
+    source $HOME/.cargo/env
+fi
+
+# Create project directory structure
+mkdir -p backend/app/{models,services,utils}
+mkdir -p backend/tests
+mkdir -p backend/alembic
+mkdir -p database
+mkdir -p scripts
+
+# Initialize uv project
+cd backend
+uv init --no-readme
+uv venv
+source .venv/bin/activate
+
+# Install dependencies
+uv sync --extra dev
+
+# Set up pre-commit hooks
+uv run pre-commit install
+
+# Setup database
+sudo -u postgres createdb reddit_analyzer || echo "Database already exists"
+sudo -u postgres createuser reddit_user || echo "User already exists"
+
+# Start Redis
+sudo systemctl start redis-server
+sudo systemctl enable redis-server
+
+echo "Setup complete! Activate virtual environment with: source backend/.venv/bin/activate"
+```
+
+### Dependency Installation Script (scripts/install_deps.sh)
+```bash
+#!/bin/bash
+set -e
+
+echo "Installing dependencies with uv..."
+
+# Navigate to backend directory
+cd backend
+
+# Ensure virtual environment exists
+if [ ! -d ".venv" ]; then
+    echo "Creating virtual environment..."
+    uv venv
+fi
+
+# Install all dependencies
+echo "Installing core dependencies..."
+uv sync
+
+echo "Installing development dependencies..."
+uv sync --extra dev
+
+echo "Verifying installation..."
+uv run python -c "import praw, sqlalchemy, redis; print('All core dependencies installed successfully')"
+uv run pytest --version
+
+echo "Dependencies installed successfully!"
+```
+
 ## Dependencies
 
-### Core Dependencies
-```
-praw>=7.6.0
-sqlalchemy>=1.4.0
-psycopg2-binary>=2.9.0
-redis>=4.3.0
-python-dotenv>=0.19.0
-alembic>=1.8.0
+### pyproject.toml Configuration
+```toml
+[project]
+name = "reddit-analyzer"
+version = "0.1.0"
+description = "Reddit API data analysis application"
+requires-python = ">=3.9"
+dependencies = [
+    "praw>=7.6.0",
+    "sqlalchemy>=1.4.0",
+    "psycopg2-binary>=2.9.0",
+    "redis>=4.3.0",
+    "python-dotenv>=0.19.0",
+    "alembic>=1.8.0",
+    "fastapi>=0.85.0",
+    "uvicorn[standard]>=0.18.0"
+]
+
+[project.optional-dependencies]
+dev = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.8.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=2.20.0"
+]
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.uv]
+dev-dependencies = [
+    "pytest>=7.0.0",
+    "pytest-mock>=3.8.0",
+    "pytest-cov>=3.0.0",
+    "black>=22.0.0",
+    "ruff>=0.1.0",
+    "pre-commit>=2.20.0"
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py39"
+
+[tool.black]
+line-length = 88
+target-version = ['py39']
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-v --cov=app --cov-report=html --cov-report=term-missing"
 ```
 
-### Development Dependencies
-```
-pytest>=7.0.0
-pytest-mock>=3.8.0
-pytest-cov>=3.0.0
-black>=22.0.0
-flake8>=4.0.0
-pre-commit>=2.20.0
+### Installation Commands
+```bash
+# Install uv
+curl -LsSf https://astral.sh/uv/install.sh | sh
+
+# Initialize project with uv
+uv init reddit-analyzer
+cd reddit-analyzer
+
+# Create virtual environment
+uv venv
+
+# Activate virtual environment
+source .venv/bin/activate  # Linux/Mac
+# or
+.venv\Scripts\activate     # Windows
+
+# Install dependencies
+uv sync
+
+# Install development dependencies
+uv sync --extra dev
+
+# Verify installation
+uv run python --version
+uv run pytest --version
 ```
 
 ## Success Criteria
@@ -210,7 +354,7 @@ pre-commit>=2.20.0
 - [ ] Database tables created and accessible
 - [ ] Fetch and store 100 posts from a test subreddit
 - [ ] All unit tests pass with >80% coverage
-- [ ] Docker environment runs without errors
+- [ ] Virtual environment runs without errors
 - [ ] Basic logging captures API calls and database operations
 
 ## Testing Requirements
@@ -225,14 +369,18 @@ pre-commit>=2.20.0
 - End-to-end data flow from Reddit API to database
 - Database connection and query operations
 - Redis caching functionality
-- Docker container startup and connectivity
+- Virtual environment activation and package installation
 
 ### Manual Testing Checklist
+- [ ] uv installation and virtual environment creation works
+- [ ] All dependencies install without conflicts
 - [ ] Reddit API authentication works
 - [ ] Database connection established
 - [ ] Sample data collection completes successfully
 - [ ] Environment variables loaded correctly
 - [ ] Logging system captures expected events
+- [ ] Pre-commit hooks execute successfully
+- [ ] Tests run with uv run pytest
 
 ## Deliverables
 1. Fully configured development environment
@@ -242,9 +390,37 @@ pre-commit>=2.20.0
 5. Test suite with passing tests
 6. Documentation for setup and configuration
 
+### uv Commands Reference
+```bash
+# Common uv commands for this phase
+uv sync                    # Install dependencies
+uv sync --extra dev       # Install with dev dependencies
+uv add package_name       # Add new dependency
+uv remove package_name    # Remove dependency
+uv run command            # Run command in virtual environment
+uv run pytest            # Run tests
+uv run black .            # Format code
+uv run ruff check .       # Lint code
+uv pip list               # List installed packages
+uv pip show package_name  # Show package info
+```
+
+### Development Workflow
+1. **Initial Setup**: Run `scripts/setup.sh` for first-time setup
+2. **Daily Development**:
+   - `source backend/.venv/bin/activate` (activate environment)
+   - `uv sync` (ensure dependencies are up-to-date)
+   - `uv run pytest` (run tests)
+   - `uv run black .` (format code)
+   - `uv run ruff check .` (lint code)
+3. **Adding Dependencies**: Use `uv add package_name` instead of pip install
+4. **Updating Dependencies**: Use `uv sync` to update all packages
+
 ## Next Phase Dependencies
 Phase 2 requires:
 - Stable Reddit API client from this phase
 - Database schema and models
 - Basic error handling and logging
 - Environment configuration system
+- Working uv virtual environment with all dependencies
+- Functional development workflow scripts

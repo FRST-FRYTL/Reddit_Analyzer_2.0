@@ -103,7 +103,7 @@ async def get_user_metrics(username: str):
 ```sql
 -- Aggregated subreddit metrics view
 CREATE MATERIALIZED VIEW subreddit_metrics_daily AS
-SELECT 
+SELECT
     subreddit_name,
     DATE(created_at) as date,
     COUNT(*) as post_count,
@@ -116,7 +116,7 @@ GROUP BY subreddit_name, DATE(created_at);
 
 -- Top trending topics view
 CREATE MATERIALIZED VIEW trending_topics AS
-SELECT 
+SELECT
     topic_id,
     topic_words,
     subreddit_name,
@@ -129,7 +129,7 @@ ORDER BY total_documents DESC;
 
 -- User engagement metrics view
 CREATE MATERIALIZED VIEW user_engagement_summary AS
-SELECT 
+SELECT
     u.username,
     COUNT(DISTINCT p.id) as post_count,
     COUNT(DISTINCT c.id) as comment_count,
@@ -155,7 +155,7 @@ interface DashboardProps {
 const Dashboard: React.FC<DashboardProps> = ({ subreddit, timeRange, customFilters }) => {
   const [dashboardConfig, setDashboardConfig] = useState<DashboardConfig>();
   const [isLoading, setIsLoading] = useState(true);
-  
+
   return (
     <DashboardLayout>
       <MetricsOverview subreddit={subreddit} timeRange={timeRange} />
@@ -299,18 +299,26 @@ frontend/
 
 ## Dependencies Updates
 
-### Backend API Dependencies
+### Backend API Dependencies (pyproject.toml)
+```toml
+[project.optional-dependencies]
+visualization = [
+    "fastapi>=0.85.0",
+    "uvicorn[standard]>=0.18.0",
+    "pydantic>=1.10.0",
+    "python-jose[cryptography]>=3.3.0",
+    "passlib[bcrypt]>=1.7.4",
+    "python-multipart>=0.0.5",
+    "aiofiles>=0.8.0",
+    "jinja2>=3.1.0",
+    "reportlab>=3.6.0",
+    "openpyxl>=3.0.0"
+]
 ```
-fastapi>=0.85.0
-uvicorn[standard]>=0.18.0
-pydantic>=1.10.0
-python-jose[cryptography]>=3.3.0
-passlib[bcrypt]>=1.7.4
-python-multipart>=0.0.5
-aiofiles>=0.8.0
-jinja2>=3.1.0
-reportlab>=3.6.0
-openpyxl>=3.0.0
+
+### Installation
+```bash
+uv sync --extra visualization
 ```
 
 ### Frontend Dependencies
@@ -345,11 +353,11 @@ from fastapi import WebSocket, WebSocketDisconnect
 class ConnectionManager:
     def __init__(self):
         self.active_connections: List[WebSocket] = []
-    
+
     async def connect(self, websocket: WebSocket):
         await websocket.accept()
         self.active_connections.append(websocket)
-    
+
     async def broadcast_update(self, data: dict):
         for connection in self.active_connections:
             await connection.send_json(data)

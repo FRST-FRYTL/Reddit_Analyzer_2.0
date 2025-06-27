@@ -69,16 +69,16 @@ class RedditAPIClient:
         self.rate_limiter = RateLimiter()
         self.request_queue = RequestQueue()
         self.cache = RedisCache()
-        
+
     async def get_subreddit_posts(self, subreddit, limit, sort='hot'):
         # Implementation with rate limiting and caching
-        
+
     async def get_post_comments(self, post_id, depth=None):
         # Recursive comment tree collection
-        
+
     async def get_user_profile(self, username):
         # User data collection with privacy handling
-        
+
     async def stream_subreddit(self, subreddit, callback):
         # Real-time streaming implementation
 ```
@@ -89,11 +89,11 @@ class RedditAPIClient:
 @celery.task(bind=True, max_retries=3)
 def collect_subreddit_posts(self, subreddit_name, collection_config):
     # Implementation with retry logic
-    
+
 @celery.task(bind=True)
 def collect_post_comments(self, post_id):
     # Comment collection task
-    
+
 @celery.task(bind=True)
 def validate_collected_data(self, data_batch):
     # Data validation task
@@ -151,13 +151,13 @@ collection:
       collection_frequency: "2h"
       post_limit: 50
       collect_comments: false
-      
+
 rate_limiting:
   requests_per_minute: 60
   burst_limit: 10
   backoff_factor: 2
   max_retries: 3
-  
+
 data_quality:
   min_post_score: -100
   max_post_age_days: 30
@@ -202,21 +202,25 @@ backend/
 
 ## Dependencies Updates
 
-### Additional Core Dependencies
-```
-celery[redis]>=5.2.0
-pydantic>=1.10.0
-aiohttp>=3.8.0
-asyncio-throttle>=1.0.0
-python-json-logger>=2.0.0
-prometheus-client>=0.14.0
+### Additional Dependencies (pyproject.toml)
+```toml
+[project.optional-dependencies]
+data-collection = [
+    "celery[redis]>=5.2.0",
+    "pydantic>=1.10.0",
+    "aiohttp>=3.8.0",
+    "asyncio-throttle>=1.0.0",
+    "python-json-logger>=2.0.0",
+    "prometheus-client>=0.14.0",
+    "structlog>=22.0.0",
+    "sentry-sdk>=1.9.0",
+    "datadog>=0.44.0"
+]
 ```
 
-### Monitoring Dependencies
-```
-structlog>=22.0.0
-sentry-sdk>=1.9.0
-datadog>=0.44.0
+### Installation
+```bash
+uv sync --extra data-collection
 ```
 
 ## Success Criteria

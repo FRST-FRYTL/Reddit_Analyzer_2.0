@@ -31,12 +31,13 @@ A comprehensive data analysis application that interfaces with Reddit's API to c
 
 ## Technology Stack
 - **Backend**: Python with FastAPI
+- **Package Manager**: uv (ultra-fast Python package installer)
 - **Database**: PostgreSQL + Redis
 - **Queue System**: Celery/Redis
 - **Frontend**: React.js with Chart.js/D3.js
 - **API Client**: PRAW (Python Reddit API Wrapper)
 - **Analytics**: Pandas, NumPy, Scikit-learn, NLTK/spaCy
-- **Deployment**: Docker containers
+- **Deployment**: systemd services with virtual environments
 
 ## Development Phases
 

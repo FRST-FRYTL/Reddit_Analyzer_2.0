@@ -6,6 +6,13 @@ from app.models.user import User
 from app.models.subreddit import Subreddit
 from app.models.post import Post
 from app.models.comment import Comment
+from app.models.collection_job import (
+    CollectionJob,
+    APIRequest,
+    DataQualityMetric,
+    SystemMetric,
+    CollectionSummary,
+)
 
 __all__ = [
     "Base",
@@ -15,4 +22,9 @@ __all__ = [
     "Subreddit",
     "Post",
     "Comment",
+    "CollectionJob",
+    "APIRequest",
+    "DataQualityMetric",
+    "SystemMetric",
+    "CollectionSummary",
 ]

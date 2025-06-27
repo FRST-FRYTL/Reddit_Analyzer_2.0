@@ -13,6 +13,11 @@ from app.models.collection_job import (
     SystemMetric,
     CollectionSummary,
 )
+from app.models.text_analysis import TextAnalysis
+from app.models.topic import Topic
+from app.models.user_metric import UserMetric
+from app.models.subreddit_analytics import SubredditAnalytics
+from app.models.ml_prediction import MLPrediction
 
 __all__ = [
     "Base",
@@ -27,4 +32,9 @@ __all__ = [
     "DataQualityMetric",
     "SystemMetric",
     "CollectionSummary",
+    "TextAnalysis",
+    "Topic",
+    "UserMetric",
+    "SubredditAnalytics",
+    "MLPrediction",
 ]

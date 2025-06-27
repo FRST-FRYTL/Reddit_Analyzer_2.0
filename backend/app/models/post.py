@@ -37,6 +37,7 @@ class Post(Base, TimestampMixin):
     # Relationships
     author = relationship("User", backref="posts")
     subreddit = relationship("Subreddit", backref="posts")
+    text_analysis = relationship("TextAnalysis", back_populates="post", uselist=False)
 
     def __repr__(self):
         return f"<Post(id='{self.id}', title='{self.title[:50]}...')>"

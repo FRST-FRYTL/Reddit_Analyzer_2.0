@@ -23,6 +23,9 @@ class Comment(Base, TimestampMixin):
     # Relationships
     post = relationship("Post", backref="comments")
     author = relationship("User", backref="comments")
+    text_analysis = relationship(
+        "TextAnalysis", back_populates="comment", uselist=False
+    )
 
     def __repr__(self):
         return f"<Comment(id='{self.id}', post_id='{self.post_id}')>"

@@ -113,7 +113,7 @@ def protected_endpoint():
     return jsonify({"user": user.username})
 
 # Require admin access
-@admin_required  
+@admin_required
 def admin_only_endpoint():
     # Only admin users can access
     pass

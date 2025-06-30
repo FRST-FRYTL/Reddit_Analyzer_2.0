@@ -388,7 +388,9 @@ def health_check(
         db = next(get_db())
 
         # Basic connectivity
-        db.execute("SELECT 1").scalar()
+        from sqlalchemy import text
+
+        db.execute(text("SELECT 1")).scalar()
         console.print("✅ Database connection: OK", style="green")
 
         # Check essential tables

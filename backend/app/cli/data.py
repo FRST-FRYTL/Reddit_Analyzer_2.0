@@ -79,7 +79,9 @@ def database_health():
             db = next(get_db())
 
             # Test database connection
-            result = db.execute("SELECT 1").scalar()
+            from sqlalchemy import text
+
+            result = db.execute(text("SELECT 1")).scalar()
 
             # Get table counts
             user_count = db.query(func.count(User.id)).scalar()

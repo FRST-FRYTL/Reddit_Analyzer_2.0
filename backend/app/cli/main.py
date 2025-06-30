@@ -52,9 +52,10 @@ def status():
     # Check database connection
     try:
         from app.database import get_db
+        from sqlalchemy import text
 
         db = next(get_db())
-        db.execute("SELECT 1").scalar()
+        db.execute(text("SELECT 1")).scalar()
         console.print("🗄️  Database: Connected", style="green")
     except Exception as e:
         console.print(f"🗄️  Database: Error - {e}", style="red")

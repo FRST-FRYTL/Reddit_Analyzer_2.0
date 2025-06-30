@@ -2,7 +2,6 @@
 
 import typer
 from rich.console import Console
-from typing import Optional
 
 from app.cli.auth import auth_app
 from app.cli.data import data_app
@@ -38,19 +37,22 @@ def version():
 def status():
     """Show overall system status."""
     from app.cli.utils.auth_manager import cli_auth
-    
+
     console.print("📊 Reddit Analyzer Status", style="bold blue")
-    
+
     # Check authentication status
     user = cli_auth.get_current_user()
     if user:
-        console.print(f"👤 Logged in as: {user.username} ({user.role.value})", style="green")
+        console.print(
+            f"👤 Logged in as: {user.username} ({user.role.value})", style="green"
+        )
     else:
         console.print("🔐 Not authenticated", style="yellow")
-    
+
     # Check database connection
     try:
         from app.database import get_db
+
         db = next(get_db())
         db.execute("SELECT 1").scalar()
         console.print("🗄️  Database: Connected", style="green")

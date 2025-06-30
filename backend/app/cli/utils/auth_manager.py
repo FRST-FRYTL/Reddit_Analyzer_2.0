@@ -7,7 +7,7 @@ from pathlib import Path
 from typing import Optional
 from rich.console import Console
 
-from app.utils.auth import get_auth_service, AuthService
+from app.utils.auth import get_auth_service
 from app.models.user import User, UserRole
 from app.database import get_db
 
@@ -32,7 +32,10 @@ class CLIAuth:
             if user:
                 tokens = self.auth_service.create_tokens(user)
                 self._store_tokens(tokens)
-                console.print(f"✅ Logged in as {user.username} ({user.role.value})", style="green")
+                console.print(
+                    f"✅ Logged in as {user.username} ({user.role.value})",
+                    style="green",
+                )
                 return True
             else:
                 console.print("❌ Invalid credentials", style="red")
@@ -56,7 +59,7 @@ class CLIAuth:
 
     def _store_tokens(self, tokens: dict):
         """Securely store authentication tokens."""
-        with open(self.token_file, 'w') as f:
+        with open(self.token_file, "w") as f:
             json.dump(tokens, f, indent=2)
         os.chmod(self.token_file, 0o600)  # Read/write for owner only
 
@@ -66,16 +69,16 @@ class CLIAuth:
             return None
 
         try:
-            with open(self.token_file, 'r') as f:
+            with open(self.token_file, "r") as f:
                 tokens = json.load(f)
 
             db = next(get_db())
-            user = self.auth_service.get_current_user(tokens['access_token'], db)
+            user = self.auth_service.get_current_user(tokens["access_token"], db)
             return user
         except:
             return None
         finally:
-            if 'db' in locals():
+            if "db" in locals():
                 db.close()
 
     def get_access_token(self) -> Optional[str]:
@@ -84,46 +87,60 @@ class CLIAuth:
             return None
 
         try:
-            with open(self.token_file, 'r') as f:
+            with open(self.token_file, "r") as f:
                 tokens = json.load(f)
-            return tokens.get('access_token')
+            return tokens.get("access_token")
         except:
             return None
 
     def require_auth(self, required_role: UserRole = None):
         """Decorator to require authentication for CLI commands."""
+
         def decorator(func):
             def wrapper(*args, **kwargs):
                 user = self.get_current_user()
                 if not user:
-                    console.print("❌ Authentication required. Run 'reddit-analyzer auth login'", style="red")
+                    console.print(
+                        "❌ Authentication required. Run 'reddit-analyzer auth login'",
+                        style="red",
+                    )
                     raise typer.Exit(1)
 
-                if required_role and not self.auth_service.require_role(user, required_role):
-                    console.print(f"❌ {required_role.value} role required", style="red")
+                if required_role and not self.auth_service.require_role(
+                    user, required_role
+                ):
+                    console.print(
+                        f"❌ {required_role.value} role required", style="red"
+                    )
                     raise typer.Exit(1)
 
                 return func(*args, **kwargs)
+
             return wrapper
+
         return decorator
 
     def auth_status(self):
         """Display current authentication status."""
         user = self.get_current_user()
-        
+
         if user:
-            console.print(f"👤 Logged in as: {user.username} ({user.role.value})", style="green")
-            
+            console.print(
+                f"👤 Logged in as: {user.username} ({user.role.value})", style="green"
+            )
+
             # Check token expiry if possible
             try:
-                with open(self.token_file, 'r') as f:
+                with open(self.token_file, "r") as f:
                     tokens = json.load(f)
                 console.print("🔑 Session: Active", style="green")
             except:
                 console.print("🔑 Session: Error reading token", style="yellow")
         else:
             console.print("🔐 Status: Not authenticated", style="yellow")
-            console.print("💡 Use 'reddit-analyzer auth login' to authenticate", style="dim")
+            console.print(
+                "💡 Use 'reddit-analyzer auth login' to authenticate", style="dim"
+            )
 
 
 # Global auth instance

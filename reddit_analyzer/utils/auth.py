@@ -138,5 +138,13 @@ class AuthService:
 
 def get_auth_service(secret_key: Optional[str] = None) -> AuthService:
     """Get configured authentication service."""
+    from reddit_analyzer.config import get_config
+
+    config = get_config()
+
+    # Use secret key from configuration if not provided
+    if secret_key is None:
+        secret_key = config.SECRET_KEY
+
     token_manager = AuthTokenManager(secret_key)
     return AuthService(token_manager)

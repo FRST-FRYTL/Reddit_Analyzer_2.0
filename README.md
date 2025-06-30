@@ -45,22 +45,22 @@ A comprehensive data analysis application for collecting, processing, and analyz
 
 4. **Set up the database**:
    ```bash
-   # Start PostgreSQL service
-   sudo systemctl start postgresql  # Linux
-   # or
-   brew services start postgresql   # macOS
-
-   # Create database and user
-   sudo -u postgres createdb reddit_analyzer
-   sudo -u postgres createuser reddit_user
-   sudo -u postgres psql -c "ALTER USER reddit_user WITH PASSWORD 'password';"
-   sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE reddit_analyzer TO reddit_user;"
-
-   # Run migrations
+   # For development with SQLite (recommended for quick start)
    alembic upgrade head
+
+   # For production with PostgreSQL
+   # sudo systemctl start postgresql  # Linux
+   # sudo -u postgres createdb reddit_analyzer
+   # sudo -u postgres createuser reddit_user
+   # Update DATABASE_URL in .env to postgresql://reddit_user:password@localhost:5432/reddit_analyzer
    ```
 
-5. **Start Redis**:
+5. **Create an admin user**:
+   ```bash
+   uv run reddit-analyzer admin create-user --username admin --password your_password --email admin@example.com --role admin
+   ```
+
+6. **Start Redis**:
    ```bash
    sudo systemctl start redis-server  # Linux
    # or

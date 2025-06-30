@@ -447,3 +447,61 @@ def health_check(
         raise typer.Exit(1)
     finally:
         db.close()
+
+
+@admin_app.command("create-user")
+def create_user(
+    username: str = typer.Option(..., "--username", "-u", help="Username"),
+    password: str = typer.Option(..., "--password", "-p", help="Password"),
+    email: Optional[str] = typer.Option(None, "--email", "-e", help="Email address"),
+    role: str = typer.Option(
+        "user", "--role", "-r", help="Role: user, moderator, admin"
+    ),
+    active: bool = typer.Option(True, "--active/--inactive", help="User active status"),
+):
+    """Create a new user account."""
+    try:
+        # Validate role
+        try:
+            user_role = UserRole(role.lower())
+        except ValueError:
+            console.print(
+                f"❌ Invalid role: {role}. Must be user, moderator, or admin",
+                style="red",
+            )
+            raise typer.Exit(1)
+
+        db = next(get_db())
+
+        # Check if username already exists
+        existing_user = db.query(User).filter(User.username == username).first()
+        if existing_user:
+            console.print(f"❌ Username '{username}' already exists", style="red")
+            raise typer.Exit(1)
+
+        # Check if email already exists (if provided)
+        if email:
+            existing_email = db.query(User).filter(User.email == email).first()
+            if existing_email:
+                console.print(f"❌ Email '{email}' already exists", style="red")
+                raise typer.Exit(1)
+
+        # Create new user
+        new_user = User(
+            username=username, email=email, role=user_role, is_active=active
+        )
+        new_user.set_password(password)
+
+        db.add(new_user)
+        db.commit()
+
+        console.print(f"✅ User '{username}' created successfully", style="green")
+        console.print(f"   Role: {user_role.value}", style="dim")
+        console.print(f"   Email: {email or 'Not provided'}", style="dim")
+        console.print(f"   Active: {'Yes' if active else 'No'}", style="dim")
+
+    except Exception as e:
+        console.print(f"❌ Failed to create user: {e}", style="red")
+        raise typer.Exit(1)
+    finally:
+        db.close()

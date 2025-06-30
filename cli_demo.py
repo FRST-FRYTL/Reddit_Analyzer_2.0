@@ -7,15 +7,11 @@ without requiring a full database setup. It shows what the CLI commands would
 display with real Reddit data.
 """
 
-import sys
 from datetime import datetime, timedelta
 import random
 
-# Add the backend directory to Python path
-sys.path.insert(0, "backend")
-
-from app.services.reddit_client import RedditClient
-from app.cli.utils.ascii_charts import ASCIIVisualizer
+from reddit_analyzer.services.reddit_client import RedditClient
+from reddit_analyzer.cli.utils.ascii_charts import ASCIIVisualizer
 from rich.console import Console
 from rich.table import Table
 from rich.panel import Panel

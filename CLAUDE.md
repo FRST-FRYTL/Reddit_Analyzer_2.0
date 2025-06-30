@@ -6,11 +6,21 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Package Management
 - **Install dependencies**: `cd backend && uv sync --extra dev`
+- **Install CLI dependencies**: `cd backend && uv sync --extra cli`
 - **Add new package**: `cd backend && uv add package_name`
 - **Activate environment**: `source backend/.venv/bin/activate`
 
+### CLI Commands (Phase 4A)
+- **Run CLI from backend**: `cd backend && uv run reddit-analyzer --help`
+- **System status**: `cd backend && uv run reddit-analyzer status`
+- **Authentication**: `cd backend && uv run reddit-analyzer auth login`
+- **Data analysis**: `cd backend && uv run reddit-analyzer viz trends --subreddit python`
+- **Generate reports**: `cd backend && uv run reddit-analyzer report daily --subreddit python`
+- **Admin functions**: `cd backend && uv run reddit-analyzer admin stats`
+
 ### Testing
 - **Run all tests**: `cd backend && pytest`
+- **Run CLI tests**: `cd backend && pytest tests/test_phase4a_cli*`
 - **Run tests with coverage**: `cd backend && pytest --cov=app --cov-report=html`
 - **Test specific file**: `cd backend && pytest tests/test_filename.py`
 
@@ -28,6 +38,13 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Structure
 - **backend/app/**: Main application code
+  - **cli/**: Command line interface (Phase 4A)
+    - **auth.py**: Authentication commands (login, logout, status)
+    - **data.py**: Data management commands (status, health, collect)
+    - **visualization.py**: Visualization commands (trends, sentiment, activity)
+    - **reports.py**: Report generation commands (daily, weekly, export)
+    - **admin.py**: Admin commands (stats, users, health-check)
+    - **utils/**: CLI utilities including ASCII chart generation
   - **models/**: SQLAlchemy database models (Post, User, Subreddit, Comment)
   - **services/**: Business logic, including `reddit_client.py` (PRAW wrapper)
   - **utils/**: Shared utilities like logging and authentication
@@ -39,6 +56,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Technology Stack
 - **Language**: Python 3.9+
 - **Package Manager**: uv (ultra-fast Python package installer)
+- **CLI Framework**: Typer with Rich for terminal formatting
+- **Visualization**: ASCII charts for terminal, matplotlib/seaborn for exports
 - **Database**: PostgreSQL with SQLAlchemy ORM
 - **Caching**: Redis
 - **Authentication**: JWT tokens with bcrypt password hashing
@@ -62,11 +81,25 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `DATABASE_URL`, `REDIS_URL`
   - `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`
 
-### Project Structure
-- `backend/`: Python application (FastAPI ready)
+### Project Structure (Current - Phase 4A)
+- `backend/`: Python application with CLI and API capabilities
+  - `app/cli/`: Command line interface implementation
+  - `app/models/`: Database models
+  - `app/services/`: Business logic and Reddit API client
+  - `tests/`: Test suite including CLI tests
 - `database/`: SQL initialization scripts
 - `scripts/`: Setup and utility scripts
-- `specs/`: Project documentation and testing specs
+- `specs/`: Project documentation and specifications
+- `cli_demo.py`: Interactive CLI demonstration script
+
+### Future Structure (Phase 4B - Planned)
+After root structure migration:
+- `reddit_analyzer/`: Main Python package (moved from backend/app/)
+- `tests/`: Test suite (moved from backend/tests/)
+- `alembic/`: Database migrations (moved from backend/alembic/)
+- `pyproject.toml`: Package configuration (moved from backend/)
+- `frontend/`: Future web interface
+- Benefits: Standard Python packaging, simplified CLI usage from root
 
 ## Development Workflow
 
@@ -93,6 +126,42 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Authentication system uses JWT tokens with role-based access control
 - Use `@auth_required`, `@admin_required`, `@moderator_required` decorators for endpoint protection
 
+## CLI System (Phase 4A)
+
+### CLI Command Groups
+- **Authentication**: `reddit-analyzer auth` - login, logout, status, whoami
+- **Data Management**: `reddit-analyzer data` - status, health, collect
+- **Visualization**: `reddit-analyzer viz` - trends, sentiment, activity analysis
+- **Reporting**: `reddit-analyzer report` - daily/weekly reports, data export
+- **Admin**: `reddit-analyzer admin` - system stats, user management, health checks
+
+### CLI Features
+- **ASCII Visualizations**: Terminal-based charts and graphs
+- **JWT Authentication**: Secure token-based CLI authentication
+- **Role-based Access**: Different commands for users, moderators, admins
+- **Data Export**: CSV/JSON export capabilities
+- **Real-time Analysis**: Live Reddit data collection and analysis
+
+### CLI Usage Examples
+```bash
+# Authentication
+reddit-analyzer auth login --username user --password pass
+reddit-analyzer auth status
+
+# Data Analysis
+reddit-analyzer viz trends --subreddit python --days 7
+reddit-analyzer viz sentiment javascript
+reddit-analyzer viz activity --subreddit datascience
+
+# Reporting
+reddit-analyzer report daily --subreddit python
+reddit-analyzer report export --format csv --output data.csv
+
+# Administration
+reddit-analyzer admin stats
+reddit-analyzer admin users
+```
+
 ## Authentication System
 
 ### User Roles
@@ -100,23 +169,30 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **MODERATOR**: Enhanced permissions for moderation tasks
 - **ADMIN**: Full system administration access
 
+### CLI Authentication
+- **Token Storage**: Secure token storage in `~/.reddit-analyzer/tokens.json`
+- **Session Management**: JWT access and refresh tokens
+- **Role Enforcement**: CLI commands respect user roles
+
 ### API Endpoints
 - **Authentication**: `/api/auth/` - login, register, refresh, logout
 - **Admin**: `/api/admin/` - user management, system stats (protected)
 
 ### Usage Examples
 ```python
+# CLI Authentication Manager
+from app.cli.utils.auth_manager import cli_auth
+
+@cli_auth.require_auth()
+def protected_cli_command():
+    user = cli_auth.get_current_user()
+    return f"Hello {user.username}"
+
 # Protect endpoint with authentication
 @auth_required
 def protected_endpoint():
     user = g.current_user  # Current authenticated user
     return jsonify({"user": user.username})
-
-# Require admin access
-@admin_required
-def admin_only_endpoint():
-    # Only admin users can access
-    pass
 
 # Get authentication service
 from app.utils.auth import get_auth_service

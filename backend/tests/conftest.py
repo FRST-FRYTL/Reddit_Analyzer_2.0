@@ -55,3 +55,10 @@ def override_get_db(test_db):
             pass
 
     return _override_get_db
+
+
+# Alias for compatibility with existing tests
+@pytest.fixture(scope="function")
+def db_session(test_db):
+    """Database session fixture (alias for test_db)."""
+    return test_db

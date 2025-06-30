@@ -30,7 +30,9 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **backend/app/**: Main application code
   - **models/**: SQLAlchemy database models (Post, User, Subreddit, Comment)
   - **services/**: Business logic, including `reddit_client.py` (PRAW wrapper)
-  - **utils/**: Shared utilities like logging configuration
+  - **utils/**: Shared utilities like logging and authentication
+  - **api/**: API endpoints for authentication and admin functions
+  - **middleware/**: Authentication middleware and decorators
   - **config.py**: Environment-based configuration management
   - **database.py**: Database session and connection management
 
@@ -39,6 +41,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Package Manager**: uv (ultra-fast Python package installer)
 - **Database**: PostgreSQL with SQLAlchemy ORM
 - **Caching**: Redis
+- **Authentication**: JWT tokens with bcrypt password hashing
 - **Reddit API**: PRAW (Python Reddit API Wrapper)
 - **Testing**: pytest with coverage reporting
 - **Code Quality**: Black (formatting), Ruff (linting)
@@ -46,6 +49,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ### Database Schema
 - Normalized relational schema with proper foreign keys
 - Core entities: users, subreddits, posts, comments
+- Authentication: User model with password hashing and roles
 - Timestamps and performance indexes included
 - Alembic handles migrations
 
@@ -56,6 +60,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `REDDIT_USERNAME`, `REDDIT_PASSWORD`
   - `REDDIT_USER_AGENT`
   - `DATABASE_URL`, `REDIS_URL`
+  - `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`
 
 ### Project Structure
 - `backend/`: Python application (FastAPI ready)
@@ -85,3 +90,35 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - Use existing patterns and conventions from the codebase
 - Database models follow SQLAlchemy best practices
 - Reddit API client is centralized in `services/reddit_client.py`
+- Authentication system uses JWT tokens with role-based access control
+- Use `@auth_required`, `@admin_required`, `@moderator_required` decorators for endpoint protection
+
+## Authentication System
+
+### User Roles
+- **USER**: Basic user access (default)
+- **MODERATOR**: Enhanced permissions for moderation tasks
+- **ADMIN**: Full system administration access
+
+### API Endpoints
+- **Authentication**: `/api/auth/` - login, register, refresh, logout
+- **Admin**: `/api/admin/` - user management, system stats (protected)
+
+### Usage Examples
+```python
+# Protect endpoint with authentication
+@auth_required
+def protected_endpoint():
+    user = g.current_user  # Current authenticated user
+    return jsonify({"user": user.username})
+
+# Require admin access
+@admin_required  
+def admin_only_endpoint():
+    # Only admin users can access
+    pass
+
+# Get authentication service
+from app.utils.auth import get_auth_service
+auth_service = get_auth_service()
+```

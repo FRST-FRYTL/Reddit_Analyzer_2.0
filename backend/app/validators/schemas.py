@@ -385,3 +385,40 @@ class BulkCollectionRequest(BaseModel):
                 "priority": 5,
             }
         }
+
+
+class UserRegistrationSchema(BaseModel):
+    """Schema for user registration."""
+
+    username: str = Field(..., min_length=3, max_length=50)
+    email: Optional[str] = Field(
+        None, regex=r"^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\.[a-zA-Z]{2,}$"
+    )
+    password: str = Field(..., min_length=8, max_length=128)
+
+    @validator("username")
+    def validate_username(cls, v):
+        if not v.replace("_", "").replace("-", "").isalnum():
+            raise ValueError(
+                "Username can only contain letters, numbers, underscores, and hyphens"
+            )
+        return v
+
+    @validator("password")
+    def validate_password(cls, v):
+        if len(v) < 8:
+            raise ValueError("Password must be at least 8 characters long")
+        if not any(c.isupper() for c in v):
+            raise ValueError("Password must contain at least one uppercase letter")
+        if not any(c.islower() for c in v):
+            raise ValueError("Password must contain at least one lowercase letter")
+        if not any(c.isdigit() for c in v):
+            raise ValueError("Password must contain at least one digit")
+        return v
+
+
+class UserLoginSchema(BaseModel):
+    """Schema for user login."""
+
+    username: str = Field(..., min_length=1)
+    password: str = Field(..., min_length=1)

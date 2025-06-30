@@ -27,6 +27,11 @@ class Config:
     APP_ENV = os.getenv("APP_ENV", "development")
     LOG_LEVEL = os.getenv("LOG_LEVEL", "INFO")
 
+    # Authentication Configuration
+    SECRET_KEY = os.getenv("SECRET_KEY", "dev-secret-key-change-in-production")
+    ACCESS_TOKEN_EXPIRE_MINUTES = int(os.getenv("ACCESS_TOKEN_EXPIRE_MINUTES", "30"))
+    REFRESH_TOKEN_EXPIRE_DAYS = int(os.getenv("REFRESH_TOKEN_EXPIRE_DAYS", "7"))
+
     @classmethod
     def validate(cls):
         """Validate required configuration values."""

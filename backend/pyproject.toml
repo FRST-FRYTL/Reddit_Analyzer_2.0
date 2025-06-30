@@ -11,7 +11,10 @@ dependencies = [
     "python-dotenv>=0.19.0",
     "alembic>=1.8.0",
     "fastapi>=0.85.0",
-    "uvicorn[standard]>=0.18.0"
+    "uvicorn[standard]>=0.18.0",
+    "passlib[bcrypt]>=1.7.4",
+    "pyjwt>=2.10.1",
+    "python-multipart>=0.0.20",
 ]
 
 [project.optional-dependencies]

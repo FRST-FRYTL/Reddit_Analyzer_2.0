@@ -81,7 +81,7 @@ def database_health():
             # Test database connection
             from sqlalchemy import text
 
-            result = db.execute(text("SELECT 1")).scalar()
+            db.execute(text("SELECT 1")).scalar()
 
             # Get table counts
             user_count = db.query(func.count(User.id)).scalar()
@@ -131,23 +131,113 @@ def collect_data(
         from reddit_analyzer.services.reddit_client import RedditClient
 
         reddit_client = RedditClient()
+        db = next(get_db())
+
+        # First, get or create the subreddit
+        subreddit_info = reddit_client.get_subreddit_info(subreddit)
+
+        # Check if subreddit exists in database
+        db_subreddit = (
+            db.query(Subreddit).filter(Subreddit.name == subreddit_info["name"]).first()
+        )
+
+        if not db_subreddit:
+            db_subreddit = Subreddit(
+                name=subreddit_info["name"],
+                display_name=subreddit_info["display_name"],
+                description=(
+                    subreddit_info["description"][:500]
+                    if subreddit_info["description"]
+                    else None
+                ),
+                subscribers=subreddit_info["subscribers"],
+                created_utc=subreddit_info["created_utc"],
+                is_nsfw=subreddit_info["is_nsfw"],
+            )
+            db.add(db_subreddit)
+            db.commit()
+
+        # Fetch posts from Reddit
+        posts = reddit_client.get_subreddit_posts(subreddit, sort=sort, limit=limit)
 
         with Progress() as progress:
             task = progress.add_task(
-                f"[cyan]Collecting from r/{subreddit}...", total=limit
+                f"[cyan]Collecting from r/{subreddit}...", total=len(posts)
             )
 
-            # This is a placeholder for actual collection logic
-            # In a real implementation, you would use the Reddit client to collect data
-            for i in range(limit):
-                # Simulate collection work
+            collected_count = 0
+            for post_data in posts:
+                # Get or create user
+                author_name = post_data["author"]
+                if author_name != "[deleted]":
+                    db_user = (
+                        db.query(User).filter(User.username == author_name).first()
+                    )
+
+                    if not db_user:
+                        try:
+                            user_info = reddit_client.get_user_info(author_name)
+                            db_user = User(
+                                username=user_info["username"],
+                                created_utc=user_info["created_utc"],
+                                comment_karma=user_info["comment_karma"],
+                                link_karma=user_info["link_karma"],
+                                is_verified=user_info["is_verified"],
+                                role=UserRole.USER,  # Reddit users are regular users
+                                is_active=True,  # Mark as active
+                                # No password_hash - these are Reddit users, not app users
+                            )
+                            db.add(db_user)
+                            db.commit()
+                        except Exception:
+                            # User might be suspended or deleted
+                            db_user = None
+                else:
+                    db_user = None
+
+                # Check if post already exists
+                existing_post = (
+                    db.query(Post).filter(Post.id == post_data["id"]).first()
+                )
+
+                if not existing_post:
+                    new_post = Post(
+                        id=post_data["id"],
+                        title=post_data["title"],
+                        selftext=post_data["selftext"],
+                        url=post_data["url"],
+                        author_id=db_user.id if db_user else None,
+                        subreddit_id=db_subreddit.id,
+                        score=post_data["score"],
+                        upvote_ratio=post_data["upvote_ratio"],
+                        num_comments=post_data["num_comments"],
+                        created_utc=post_data["created_utc"],
+                        is_self=post_data["is_self"],
+                        is_nsfw=post_data["is_nsfw"],
+                        is_locked=post_data["is_locked"],
+                    )
+                    db.add(new_post)
+                    collected_count += 1
+
                 progress.update(task, advance=1)
 
-        console.print(f"✅ Collected {limit} posts from r/{subreddit}", style="green")
+            db.commit()
+
+        console.print(
+            f"✅ Collected {collected_count} new posts from r/{subreddit}",
+            style="green",
+        )
+        if collected_count < len(posts):
+            console.print(
+                f"ℹ️  Skipped {len(posts) - collected_count} existing posts",
+                style="yellow",
+            )
 
     except Exception as e:
         console.print(f"❌ Data collection failed: {e}", style="red")
         raise typer.Exit(1)
+    finally:
+        db.close()
 
 
 @data_app.command("init")

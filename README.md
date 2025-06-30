@@ -2,6 +2,8 @@
 
 A comprehensive data analysis application for collecting, processing, and analyzing Reddit data using the Reddit API.
 
+> 🚀 **Phase 4B Update**: Now using standard Python package structure with root-level CLI access. All commands use `uv run` for simplified development workflow.
+
 ## Features
 
 - **Reddit API Integration**: Seamless data collection using PRAW (Python Reddit API Wrapper)
@@ -30,15 +32,15 @@ A comprehensive data analysis application for collecting, processing, and analyz
    cd reddit_analyzer
    ```
 
-2. **Run the setup script**:
+2. **Install dependencies with uv**:
    ```bash
-   ./scripts/setup.sh
+   uv sync --extra cli --extra dev
    ```
 
 3. **Configure environment variables**:
    ```bash
-   cp backend/.env.example backend/.env
-   # Edit backend/.env with your Reddit API credentials
+   cp .env.example .env
+   # Edit .env with your Reddit API credentials
    ```
 
 4. **Set up the database**:
@@ -55,7 +57,7 @@ A comprehensive data analysis application for collecting, processing, and analyz
    sudo -u postgres psql -c "GRANT ALL PRIVILEGES ON DATABASE reddit_analyzer TO reddit_user;"
 
    # Run migrations
-   cd backend && source .venv/bin/activate && alembic upgrade head
+   alembic upgrade head
    ```
 
 5. **Start Redis**:
@@ -67,80 +69,86 @@ A comprehensive data analysis application for collecting, processing, and analyz
 
 ### CLI Usage
 
-After installation, use the Reddit Analyzer CLI:
+After installation, use the Reddit Analyzer CLI with `uv run`:
 
 **Authenticate**:
 ```bash
-reddit-analyzer auth login --username your_username --password your_password
+uv run reddit-analyzer auth login --username your_username --password your_password
 ```
 
 **Check system status**:
 ```bash
-reddit-analyzer status
+uv run reddit-analyzer status
 ```
 
 **Analyze data**:
 ```bash
-reddit-analyzer viz trends --subreddit python --days 7
-reddit-analyzer viz sentiment javascript
-reddit-analyzer viz activity --subreddit datascience
+uv run reddit-analyzer viz trends --subreddit python --days 7
+uv run reddit-analyzer viz sentiment javascript
+uv run reddit-analyzer viz activity --subreddit datascience
 ```
 
 **Generate reports**:
 ```bash
-reddit-analyzer report daily --subreddit python
-reddit-analyzer report weekly --subreddit javascript
-reddit-analyzer report export --format csv --output data.csv
+uv run reddit-analyzer report daily --subreddit python
+uv run reddit-analyzer report weekly --subreddit javascript
+uv run reddit-analyzer report export --format csv --output data.csv
 ```
 
 **Admin functions** (requires admin role):
 ```bash
-reddit-analyzer admin stats
-reddit-analyzer admin users
-reddit-analyzer admin health-check
+uv run reddit-analyzer admin stats
+uv run reddit-analyzer admin users
+uv run reddit-analyzer admin health-check
 ```
 
 ### Development
 
-**Activate the environment**:
+**Install dependencies**:
 ```bash
-source backend/.venv/bin/activate
+uv sync --extra dev
 ```
 
 **Run tests**:
 ```bash
-cd backend && pytest
+uv run pytest
 ```
 
 **Format and lint code**:
 ```bash
-cd backend && black . && ruff check .
+uv run black . && uv run ruff check .
 ```
 
-## Project Structure
+**Run CLI commands during development**:
+```bash
+uv run reddit-analyzer --help
+```
+
+## Project Structure (Phase 4B - Standard Python Package)
 
 ```
 reddit_analyzer/
-├── backend/                    # Main application backend
-│   ├── app/                   # Core application code
-│   │   ├── cli/              # Command line interface
-│   │   │   ├── auth.py      # Authentication commands
-│   │   │   ├── data.py      # Data management commands
-│   │   │   ├── visualization.py # Visualization commands
-│   │   │   ├── reports.py   # Report generation commands
-│   │   │   ├── admin.py     # Admin commands
-│   │   │   └── utils/       # CLI utilities and ASCII charts
-│   │   ├── models/           # Database models
-│   │   ├── services/         # Business logic
-│   │   ├── utils/            # Utility functions
-│   │   ├── config.py         # Configuration management
-│   │   └── database.py       # Database setup
-│   ├── tests/                # Test suite
-│   ├── alembic/              # Database migrations
-│   └── pyproject.toml        # Project configuration
+├── reddit_analyzer/           # Main Python package
+│   ├── cli/                  # Command line interface
+│   │   ├── auth.py          # Authentication commands
+│   │   ├── data.py          # Data management commands
+│   │   ├── visualization.py # Visualization commands
+│   │   ├── reports.py       # Report generation commands
+│   │   ├── admin.py         # Admin commands
+│   │   └── utils/           # CLI utilities and ASCII charts
+│   ├── models/               # Database models
+│   ├── services/             # Business logic
+│   ├── utils/                # Utility functions
+│   ├── config.py             # Configuration management
+│   └── database.py           # Database setup
+├── tests/                     # Test suite
+├── alembic/                   # Database migrations
 ├── database/                  # Database initialization
 ├── scripts/                   # Setup and utility scripts
-└── specs/                     # Documentation and specifications
+├── specs/                     # Documentation and specifications
+├── pyproject.toml             # Project configuration
+├── .env.example               # Environment template
+└── README.md                  # This file
 ```
 
 ## Technology Stack
@@ -158,7 +166,7 @@ reddit_analyzer/
 
 ## Environment Variables
 
-Required environment variables in `backend/.env`:
+Required environment variables in `.env`:
 
 ```bash
 # Reddit API Credentials
@@ -184,45 +192,45 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 
 ### Authentication Commands
 ```bash
-reddit-analyzer auth login     # Login with username/password
-reddit-analyzer auth logout    # Logout and clear session
-reddit-analyzer auth status    # Show authentication status
-reddit-analyzer auth whoami    # Show current user info
+uv run reddit-analyzer auth login     # Login with username/password
+uv run reddit-analyzer auth logout    # Logout and clear session
+uv run reddit-analyzer auth status    # Show authentication status
+uv run reddit-analyzer auth whoami    # Show current user info
 ```
 
 ### Data Management Commands
 ```bash
-reddit-analyzer data status    # Show data collection status
-reddit-analyzer data health    # Check database health
-reddit-analyzer data collect   # Start data collection
+uv run reddit-analyzer data status    # Show data collection status
+uv run reddit-analyzer data health    # Check database health
+uv run reddit-analyzer data collect   # Start data collection
 ```
 
 ### Visualization Commands
 ```bash
-reddit-analyzer viz trends --subreddit NAME [--days N]     # Show trending posts
-reddit-analyzer viz sentiment SUBREDDIT                    # Sentiment analysis
-reddit-analyzer viz activity --subreddit NAME [--period P] # Activity trends
+uv run reddit-analyzer viz trends --subreddit NAME [--days N]     # Show trending posts
+uv run reddit-analyzer viz sentiment SUBREDDIT                    # Sentiment analysis
+uv run reddit-analyzer viz activity --subreddit NAME [--period P] # Activity trends
 ```
 
 ### Report Commands
 ```bash
-reddit-analyzer report daily --subreddit NAME [--date DATE]     # Daily report
-reddit-analyzer report weekly --subreddit NAME [--weeks N]      # Weekly report
-reddit-analyzer report export --format FORMAT --output FILE     # Export data
+uv run reddit-analyzer report daily --subreddit NAME [--date DATE]     # Daily report
+uv run reddit-analyzer report weekly --subreddit NAME [--weeks N]      # Weekly report
+uv run reddit-analyzer report export --format FORMAT --output FILE     # Export data
 ```
 
 ### Admin Commands (Admin role required)
 ```bash
-reddit-analyzer admin stats        # System statistics
-reddit-analyzer admin users        # List all users
-reddit-analyzer admin health-check # Full system health check
+uv run reddit-analyzer admin stats        # System statistics
+uv run reddit-analyzer admin users        # List all users
+uv run reddit-analyzer admin health-check # Full system health check
 ```
 
 ### General Commands
 ```bash
-reddit-analyzer status      # Overall system status
-reddit-analyzer version     # Show version info
-reddit-analyzer --help      # Show help for any command
+uv run reddit-analyzer status      # Overall system status
+uv run reddit-analyzer version     # Show version info
+uv run reddit-analyzer --help      # Show help for any command
 ```
 
 ## Database Schema
@@ -238,26 +246,27 @@ The application uses a normalized relational database with the following core en
 
 Run the complete test suite:
 ```bash
-cd backend && pytest
+uv run pytest
 ```
 
 Run tests with coverage report:
 ```bash
-cd backend && pytest --cov=app --cov-report=html
+uv run pytest --cov=reddit_analyzer --cov-report=html
 ```
 
 Test specific functionality:
 ```bash
-cd backend && pytest tests/test_models.py
+uv run pytest tests/test_models.py
 ```
 
 ## Development Workflow
 
-1. **Make changes**: Follow existing code patterns and conventions
-2. **Test**: Run `pytest` to ensure all tests pass
-3. **Format**: Use `black .` to format code
-4. **Lint**: Use `ruff check .` to check for issues
-5. **Commit**: Pre-commit hooks will run automatically
+1. **Install dependencies**: `uv sync --extra dev`
+2. **Make changes**: Follow existing code patterns and conventions
+3. **Test**: Run `uv run pytest` to ensure all tests pass
+4. **Format**: Use `uv run black .` to format code
+5. **Lint**: Use `uv run ruff check .` to check for issues
+6. **Commit**: Pre-commit hooks will run automatically
 
 ## Contributing
 

@@ -5,40 +5,40 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 ## Development Commands
 
 ### Package Management
-- **Install dependencies**: `cd backend && uv sync --extra dev`
-- **Install CLI dependencies**: `cd backend && uv sync --extra cli`
-- **Add new package**: `cd backend && uv add package_name`
-- **Activate environment**: `source backend/.venv/bin/activate`
+- **Install dependencies**: `uv sync --extra dev`
+- **Install CLI dependencies**: `uv sync --extra cli`
+- **Add new package**: `uv add package_name`
+- **Activate environment**: `source .venv/bin/activate`
 
-### CLI Commands (Phase 4A)
-- **Run CLI from backend**: `cd backend && uv run reddit-analyzer --help`
-- **System status**: `cd backend && uv run reddit-analyzer status`
-- **Authentication**: `cd backend && uv run reddit-analyzer auth login`
-- **Data analysis**: `cd backend && uv run reddit-analyzer viz trends --subreddit python`
-- **Generate reports**: `cd backend && uv run reddit-analyzer report daily --subreddit python`
-- **Admin functions**: `cd backend && uv run reddit-analyzer admin stats`
+### CLI Commands (Phase 4B - Root Structure)
+- **Run CLI from root**: `uv run reddit-analyzer --help`
+- **System status**: `uv run reddit-analyzer status`
+- **Authentication**: `uv run reddit-analyzer auth login`
+- **Data analysis**: `uv run reddit-analyzer viz trends --subreddit python`
+- **Generate reports**: `uv run reddit-analyzer report daily --subreddit python`
+- **Admin functions**: `uv run reddit-analyzer admin stats`
 
 ### Testing
-- **Run all tests**: `cd backend && pytest`
-- **Run CLI tests**: `cd backend && pytest tests/test_phase4a_cli*`
-- **Run tests with coverage**: `cd backend && pytest --cov=app --cov-report=html`
-- **Test specific file**: `cd backend && pytest tests/test_filename.py`
+- **Run all tests**: `pytest`
+- **Run CLI tests**: `pytest tests/test_phase4a_cli*`
+- **Run tests with coverage**: `pytest --cov=reddit_analyzer --cov-report=html`
+- **Test specific file**: `pytest tests/test_filename.py`
 
 ### Code Quality
-- **Format code**: `cd backend && black .`
-- **Lint code**: `cd backend && ruff check .`
+- **Format code**: `black .`
+- **Lint code**: `ruff check .`
 - **Run pre-commit hooks**: `pre-commit run --all-files`
 
 ### Database
-- **Run migrations**: `cd backend && alembic upgrade head`
-- **Create new migration**: `cd backend && alembic revision --autogenerate -m "description"`
+- **Run migrations**: `alembic upgrade head`
+- **Create new migration**: `alembic revision --autogenerate -m "description"`
 - **Database setup**: See `scripts/setup.sh` for complete setup instructions
 
 ## Architecture Overview
 
-### Core Structure
-- **backend/app/**: Main application code
-  - **cli/**: Command line interface (Phase 4A)
+### Core Structure (Phase 4B - Standard Python Package)
+- **reddit_analyzer/**: Main application package
+  - **cli/**: Command line interface (Phase 4B)
     - **auth.py**: Authentication commands (login, logout, status)
     - **data.py**: Data management commands (status, health, collect)
     - **visualization.py**: Visualization commands (trends, sentiment, activity)
@@ -74,29 +74,26 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Configuration
 - Environment-based config (development, production, test)
-- Required environment variables in `backend/.env`:
+- Required environment variables in `.env`:
   - `REDDIT_CLIENT_ID`, `REDDIT_CLIENT_SECRET`
   - `REDDIT_USERNAME`, `REDDIT_PASSWORD`
   - `REDDIT_USER_AGENT`
   - `DATABASE_URL`, `REDIS_URL`
   - `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`
 
-### Project Structure (Current - Phase 4A)
-- `backend/`: Python application with CLI and API capabilities
-  - `app/cli/`: Command line interface implementation
-  - `app/models/`: Database models
-  - `app/services/`: Business logic and Reddit API client
-  - `tests/`: Test suite including CLI tests
-- `database/`: SQL initialization scripts
+### Project Structure (Phase 4B - Current)
+Standard Python package layout:
+- `reddit_analyzer/`: Main Python package (CLI and core functionality)
+  - `cli/`: Command line interface implementation
+  - `models/`: Database models
+  - `services/`: Business logic and Reddit API client
+  - `api/`: API endpoints (future web interface)
+  - `utils/`: Shared utilities
+- `tests/`: Test suite including CLI tests
+- `alembic/`: Database migrations
 - `scripts/`: Setup and utility scripts
 - `specs/`: Project documentation and specifications
 - `cli_demo.py`: Interactive CLI demonstration script
-
-### Future Structure (Phase 4B - Planned)
-After root structure migration:
-- `reddit_analyzer/`: Main Python package (moved from backend/app/)
-- `tests/`: Test suite (moved from backend/tests/)
-- `alembic/`: Database migrations (moved from backend/alembic/)
 - `pyproject.toml`: Package configuration (moved from backend/)
 - `frontend/`: Future web interface
 - Benefits: Standard Python packaging, simplified CLI usage from root
@@ -104,14 +101,14 @@ After root structure migration:
 ## Development Workflow
 
 1. **Environment Setup**: Run `scripts/setup.sh` for complete setup
-2. **Activate Environment**: `source backend/.venv/bin/activate`
+2. **Activate Environment**: `source .venv/bin/activate`
 3. **Code Changes**: Make changes following existing patterns
 4. **Testing**: Run `pytest` before committing
 5. **Code Quality**: Format with `black` and lint with `ruff`
 6. **Pre-commit**: Hooks automatically run on commit
 
 ## Testing Framework
-- **Location**: `backend/tests/`
+- **Location**: `tests/`
 - **Framework**: pytest with fixtures
 - **Coverage**: HTML and XML reports generated
 - **Database**: In-memory SQLite for test isolation
@@ -126,7 +123,7 @@ After root structure migration:
 - Authentication system uses JWT tokens with role-based access control
 - Use `@auth_required`, `@admin_required`, `@moderator_required` decorators for endpoint protection
 
-## CLI System (Phase 4A)
+## CLI System (Phase 4B)
 
 ### CLI Command Groups
 - **Authentication**: `reddit-analyzer auth` - login, logout, status, whoami

@@ -5,6 +5,7 @@ import json
 import typer
 from pathlib import Path
 from typing import Optional
+from functools import wraps
 from rich.console import Console
 
 from reddit_analyzer.utils.auth import get_auth_service
@@ -75,7 +76,7 @@ class CLIAuth:
             db = next(get_db())
             user = self.auth_service.get_current_user(tokens["access_token"], db)
             return user
-        except:
+        except Exception:
             return None
         finally:
             if "db" in locals():
@@ -90,14 +91,15 @@ class CLIAuth:
             with open(self.token_file, "r") as f:
                 tokens = json.load(f)
             return tokens.get("access_token")
-        except:
+        except Exception:
             return None
 
     def require_auth(self, required_role: UserRole = None):
         """Decorator to require authentication for CLI commands."""
 
         def decorator(func):
-            def wrapper(*args, **kwargs):
+            @wraps(func)
+            def wrapper(**kwargs):
                 user = self.get_current_user()
                 if not user:
                     console.print(
@@ -114,7 +116,7 @@ class CLIAuth:
                     )
                     raise typer.Exit(1)
 
-                return func(*args, **kwargs)
+                return func(**kwargs)
 
             return wrapper
 
@@ -132,9 +134,9 @@ class CLIAuth:
             # Check token expiry if possible
             try:
                 with open(self.token_file, "r") as f:
-                    tokens = json.load(f)
+                    json.load(f)  # Just verify file is valid JSON
                 console.print("🔑 Session: Active", style="green")
-            except:
+            except Exception:
                 console.print("🔑 Session: Error reading token", style="yellow")
         else:
             console.print("🔐 Status: Not authenticated", style="yellow")

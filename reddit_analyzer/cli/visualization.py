@@ -19,9 +19,7 @@ visualizer = ASCIIVisualizer()
 @viz_app.command("trends")
 @cli_auth.require_auth()
 def show_trends(
-    subreddit: Optional[str] = typer.Option(
-        None, help="Specific subreddit (without r/)"
-    ),
+    subreddit: str = typer.Option(..., help="Specific subreddit (without r/)"),
     days: int = typer.Option(7, help="Number of days to analyze"),
     export: Optional[str] = typer.Option(None, help="Export chart to PNG file"),
 ):

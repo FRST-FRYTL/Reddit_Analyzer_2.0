@@ -11,7 +11,9 @@ from reddit_analyzer.models.user import User, UserRole
 from reddit_analyzer.models.post import Post
 from reddit_analyzer.models.comment import Comment
 from reddit_analyzer.models.subreddit import Subreddit
+from reddit_analyzer.models.text_analysis import TextAnalysis
 from reddit_analyzer.database import get_db
+from reddit_analyzer.services.nlp_service import get_nlp_service
 
 data_app = typer.Typer(help="Data management commands")
 console = Console()
@@ -30,6 +32,12 @@ def data_status():
         comment_count = db.query(func.count(Comment.id)).scalar()
         subreddit_count = db.query(func.count(Subreddit.id)).scalar()
 
+        # Get NLP analysis counts
+        nlp_count = db.query(func.count(TextAnalysis.id)).scalar()
+        posts_with_nlp = db.query(
+            func.count(func.distinct(TextAnalysis.post_id))
+        ).scalar()
+
         # Create status table
         table = Table(title="📊 Data Collection Status")
         table.add_column("Metric", style="cyan")
@@ -39,6 +47,11 @@ def data_status():
         table.add_row("Subreddits", f"{subreddit_count:,}")
         table.add_row("Posts", f"{post_count:,}")
         table.add_row("Comments", f"{comment_count:,}")
+        table.add_row("NLP Analyses", f"{nlp_count:,}")
+
+        if post_count > 0:
+            nlp_coverage = (posts_with_nlp / post_count) * 100
+            table.add_row("NLP Coverage", f"{nlp_coverage:.1f}%")
 
         console.print(table)
 
@@ -123,6 +136,7 @@ def collect_data(
     subreddit: str = typer.Argument(..., help="Subreddit name to collect from"),
     limit: int = typer.Option(100, help="Number of posts to collect"),
     sort: str = typer.Option("hot", help="Sort method: hot, new, top"),
+    skip_nlp: bool = typer.Option(False, "--skip-nlp", help="Skip NLP analysis"),
 ):
     """Collect data from specified subreddit."""
     console.print(f"🚀 Starting data collection from r/{subreddit}")
@@ -132,6 +146,7 @@ def collect_data(
 
         reddit_client = RedditClient()
         db = next(get_db())
+        nlp_service = get_nlp_service() if not skip_nlp else None
 
         # First, get or create the subreddit
         subreddit_info = reddit_client.get_subreddit_info(subreddit)
@@ -166,6 +181,8 @@ def collect_data(
             )
 
             collected_count = 0
+            posts_to_analyze = []  # Store posts for NLP analysis
+
             for post_data in posts:
                 # Get or create user
                 author_name = post_data["author"]
@@ -219,6 +236,10 @@ def collect_data(
                     db.add(new_post)
                     collected_count += 1
 
+                    # Add to NLP analysis queue if not skipped
+                    if not skip_nlp:
+                        posts_to_analyze.append(new_post)
+
                 progress.update(task, advance=1)
 
             db.commit()
@@ -232,6 +253,44 @@ def collect_data(
                 f"ℹ️  Skipped {len(posts) - collected_count} existing posts",
                 style="yellow",
             )
+
+        # Run NLP analysis on collected posts
+        if not skip_nlp and posts_to_analyze:
+            console.print(
+                f"\n🧠 Processing NLP analysis for {len(posts_to_analyze)} posts..."
+            )
+
+            with Progress() as nlp_progress:
+                nlp_task = nlp_progress.add_task(
+                    "[cyan]Analyzing sentiment and extracting features...",
+                    total=len(posts_to_analyze),
+                )
+
+                analyzed_count = 0
+                for post in posts_to_analyze:
+                    try:
+                        # Combine title and body for analysis
+                        full_text = f"{post.title}"
+                        if post.selftext:
+                            full_text += f"\n\n{post.selftext}"
+
+                        # Analyze text and store results
+                        nlp_service.analyze_text(full_text, post_id=post.id)
+                        analyzed_count += 1
+
+                    except Exception as e:
+                        console.print(
+                            f"⚠️  Failed to analyze post {post.id}: {e}", style="yellow"
+                        )
+
+                    nlp_progress.update(nlp_task, advance=1)
+
+            console.print(
+                f"✅ Completed NLP analysis for {analyzed_count} posts",
+                style="green",
+            )
+        elif skip_nlp:
+            console.print("ℹ️  NLP analysis skipped", style="yellow")
 
     except Exception as e:
         console.print(f"❌ Data collection failed: {e}", style="red")

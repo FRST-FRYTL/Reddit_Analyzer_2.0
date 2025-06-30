@@ -10,13 +10,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Add new package**: `uv add package_name`
 - **Activate environment**: `source .venv/bin/activate`
 
-### CLI Commands (Phase 4B - Root Structure)
+### CLI Commands (Phase 4B/4C - Root Structure with NLP)
 - **Run CLI from root**: `uv run reddit-analyzer --help`
 - **System status**: `uv run reddit-analyzer status`
 - **Authentication**: `uv run reddit-analyzer auth login`
+- **Data collection**: `uv run reddit-analyzer data collect --subreddit python`
 - **Data analysis**: `uv run reddit-analyzer viz trends --subreddit python`
 - **Generate reports**: `uv run reddit-analyzer report daily --subreddit python`
 - **Admin functions**: `uv run reddit-analyzer admin stats`
+- **NLP analysis**: `uv run reddit-analyzer nlp analyze --subreddit python`
+- **Topic modeling**: `uv run reddit-analyzer nlp topics python --num-topics 10`
+- **Keyword extraction**: `uv run reddit-analyzer nlp keywords python --top-n 20`
+- **Emotion analysis**: `uv run reddit-analyzer nlp emotions --subreddit python`
 
 ### Testing
 - **Run all tests**: `pytest`
@@ -38,15 +43,23 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ### Core Structure (Phase 4B - Standard Python Package)
 - **reddit_analyzer/**: Main application package
-  - **cli/**: Command line interface (Phase 4B)
+  - **cli/**: Command line interface (Phase 4B/4C)
     - **auth.py**: Authentication commands (login, logout, status)
-    - **data.py**: Data management commands (status, health, collect)
-    - **visualization.py**: Visualization commands (trends, sentiment, activity)
+    - **data.py**: Data management commands (status, health, collect with NLP)
+    - **visualization.py**: Visualization commands (trends, sentiment with real NLP, activity)
     - **reports.py**: Report generation commands (daily, weekly, export)
     - **admin.py**: Admin commands (stats, users, health-check)
+    - **nlp.py**: NLP commands (analyze, topics, keywords, emotions, export)
     - **utils/**: CLI utilities including ASCII chart generation
-  - **models/**: SQLAlchemy database models (Post, User, Subreddit, Comment)
-  - **services/**: Business logic, including `reddit_client.py` (PRAW wrapper)
+  - **models/**: SQLAlchemy database models (Post, User, Subreddit, Comment, TextAnalysis, Topic)
+  - **services/**: Business logic
+    - **reddit_client.py**: PRAW wrapper for Reddit API
+    - **nlp_service.py**: NLP orchestration service (sentiment, topics, keywords)
+  - **processing/**: NLP processing modules
+    - **sentiment_analyzer.py**: Multi-model sentiment analysis
+    - **topic_modeler.py**: Topic discovery and modeling
+    - **feature_extractor.py**: Feature extraction for ML
+    - **text_processor.py**: Text preprocessing and utilities
   - **utils/**: Shared utilities like logging and authentication
   - **api/**: API endpoints for authentication and admin functions
   - **middleware/**: Authentication middleware and decorators
@@ -62,12 +75,18 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 - **Caching**: Redis
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **Reddit API**: PRAW (Python Reddit API Wrapper)
+- **NLP Stack**:
+  - VADER & TextBlob for sentiment analysis
+  - Transformers (Hugging Face) for deep learning models
+  - spaCy for entity recognition
+  - scikit-learn for topic modeling (LDA)
 - **Testing**: pytest with coverage reporting
 - **Code Quality**: Black (formatting), Ruff (linting)
 
 ### Database Schema
 - Normalized relational schema with proper foreign keys
 - Core entities: users, subreddits, posts, comments
+- NLP entities: text_analyses (sentiment, keywords, emotions), topics
 - Authentication: User model with password hashing and roles
 - Timestamps and performance indexes included
 - Alembic handles migrations
@@ -80,8 +99,12 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
   - `REDDIT_USER_AGENT`
   - `DATABASE_URL`, `REDIS_URL`
   - `SECRET_KEY`, `ACCESS_TOKEN_EXPIRE_MINUTES`, `REFRESH_TOKEN_EXPIRE_DAYS`
+- Optional NLP configuration:
+  - `NLP_ENABLE_TRANSFORMERS` (default: true) - Enable/disable transformer models
+  - `NLP_CONFIDENCE_THRESHOLD` (default: 0.5) - Minimum confidence for predictions
+  - `NLP_BATCH_SIZE` (default: 100) - Batch size for NLP processing
 
-### Project Structure (Phase 4B - Current)
+### Project Structure (Phase 4B/4C - Current with NLP)
 Standard Python package layout:
 - `reddit_analyzer/`: Main Python package (CLI and core functionality)
   - `cli/`: Command line interface implementation
@@ -123,13 +146,14 @@ Standard Python package layout:
 - Authentication system uses JWT tokens with role-based access control
 - Use `@auth_required`, `@admin_required`, `@moderator_required` decorators for endpoint protection
 
-## CLI System (Phase 4B)
+## CLI System (Phase 4B/4C - With NLP Integration)
 
 ### CLI Command Groups
 - **Authentication**: `reddit-analyzer auth` - login, logout, status, whoami
-- **Data Management**: `reddit-analyzer data` - status, health, collect
-- **Visualization**: `reddit-analyzer viz` - trends, sentiment, activity analysis
+- **Data Management**: `reddit-analyzer data` - status, health, collect (with NLP)
+- **Visualization**: `reddit-analyzer viz` - trends, sentiment (real NLP), activity analysis
 - **Reporting**: `reddit-analyzer report` - daily/weekly reports, data export
+- **NLP Analysis**: `reddit-analyzer nlp` - analyze, topics, keywords, emotions, export
 - **Admin**: `reddit-analyzer admin` - system stats, user management, health checks
 
 ### CLI Features
@@ -138,6 +162,9 @@ Standard Python package layout:
 - **Role-based Access**: Different commands for users, moderators, admins
 - **Data Export**: CSV/JSON export capabilities
 - **Real-time Analysis**: Live Reddit data collection and analysis
+- **NLP Processing**: Automatic sentiment analysis, topic modeling, keyword extraction
+- **Multi-model Sentiment**: Ensemble approach using VADER, TextBlob, and Transformers
+- **Emotion Detection**: Identify emotions in posts (joy, anger, fear, etc.)
 
 ### CLI Usage Examples
 ```bash
@@ -145,10 +172,21 @@ Standard Python package layout:
 reddit-analyzer auth login --username user --password pass
 reddit-analyzer auth status
 
+# Data Collection with NLP
+reddit-analyzer data collect --subreddit python --limit 100
+reddit-analyzer data collect --subreddit javascript --skip-nlp  # Skip NLP for faster collection
+
 # Data Analysis
 reddit-analyzer viz trends --subreddit python --days 7
-reddit-analyzer viz sentiment javascript
+reddit-analyzer viz sentiment javascript  # Uses real NLP data
 reddit-analyzer viz activity --subreddit datascience
+
+# NLP Analysis
+reddit-analyzer nlp analyze --subreddit python --limit 50
+reddit-analyzer nlp topics python --num-topics 10
+reddit-analyzer nlp keywords python --top-n 25
+reddit-analyzer nlp emotions --subreddit python
+reddit-analyzer nlp export --subreddit python --format csv --output nlp_results.csv
 
 # Reporting
 reddit-analyzer report daily --subreddit python

@@ -9,7 +9,9 @@ from reddit_analyzer.cli.utils.auth_manager import cli_auth
 from reddit_analyzer.cli.utils.ascii_charts import ASCIIVisualizer
 from reddit_analyzer.models.post import Post
 from reddit_analyzer.models.subreddit import Subreddit
+from reddit_analyzer.models.text_analysis import TextAnalysis
 from reddit_analyzer.database import get_db
+from sqlalchemy import func
 
 viz_app = typer.Typer(help="Visualization commands")
 console = Console()
@@ -36,7 +38,9 @@ def show_trends(
 
         if subreddit:
             subreddit_obj = (
-                db.query(Subreddit).filter(Subreddit.name == subreddit).first()
+                db.query(Subreddit)
+                .filter(func.lower(Subreddit.name) == subreddit.lower())
+                .first()
             )
             if not subreddit_obj:
                 console.print(f"❌ Subreddit r/{subreddit} not found", style="red")
@@ -126,36 +130,63 @@ def show_sentiment(
     try:
         db = next(get_db())
 
-        # Find subreddit
-        subreddit_obj = db.query(Subreddit).filter(Subreddit.name == subreddit).first()
+        # Find subreddit (case-insensitive)
+        subreddit_obj = (
+            db.query(Subreddit)
+            .filter(func.lower(Subreddit.name) == subreddit.lower())
+            .first()
+        )
         if not subreddit_obj:
             console.print(f"❌ Subreddit r/{subreddit} not found", style="red")
             raise typer.Exit(1)
 
-        # Get posts with sentiment data (placeholder for actual sentiment analysis)
-        posts = (
-            db.query(Post)
+        # Get posts with sentiment data from TextAnalysis table
+        posts_with_sentiment = (
+            db.query(Post, TextAnalysis)
+            .join(TextAnalysis, Post.id == TextAnalysis.post_id)
             .filter(Post.subreddit_id == subreddit_obj.id)
             .limit(1000)
             .all()
         )
 
-        if not posts:
-            console.print(f"📭 No posts found for r/{subreddit}", style="yellow")
+        if not posts_with_sentiment:
+            console.print(
+                f"📭 No posts with sentiment analysis found for r/{subreddit}",
+                style="yellow",
+            )
+            console.print(
+                "💡 Tip: Run 'reddit-analyzer data collect' to gather posts first",
+                style="dim",
+            )
             return
 
-        # Simulate sentiment analysis (in real implementation, use actual sentiment scores)
-        # This would come from a text_analysis table or similar
+        # Use real sentiment analysis data
         sentiment_counts = {"positive": 0, "neutral": 0, "negative": 0}
+        sentiment_scores = []
+        confidence_scores = []
 
-        for post in posts:
-            # Placeholder logic based on score
-            if post.score > 10:
-                sentiment_counts["positive"] += 1
-            elif post.score < -2:
-                sentiment_counts["negative"] += 1
-            else:
-                sentiment_counts["neutral"] += 1
+        # Sample posts for each sentiment
+        sample_posts = {"positive": [], "neutral": [], "negative": []}
+
+        for post, analysis in posts_with_sentiment:
+            sentiment_label = analysis.sentiment_label.lower()
+            if sentiment_label in sentiment_counts:
+                sentiment_counts[sentiment_label] += 1
+                sentiment_scores.append(analysis.sentiment_score)
+                confidence_scores.append(analysis.confidence_score)
+
+                # Collect sample posts (up to 3 per sentiment)
+                if len(sample_posts[sentiment_label]) < 3:
+                    sample_posts[sentiment_label].append(
+                        {
+                            "title": (
+                                post.title[:60] + "..."
+                                if len(post.title) > 60
+                                else post.title
+                            ),
+                            "score": analysis.sentiment_score,
+                        }
+                    )
 
         console.print(f"😊 Sentiment Analysis for r/{subreddit}")
 
@@ -164,6 +195,77 @@ def show_sentiment(
             sentiment_counts, f"Sentiment Distribution - r/{subreddit}"
         )
         console.print(sentiment_chart)
+
+        # Calculate and display statistics
+        if sentiment_scores:
+            avg_sentiment = sum(sentiment_scores) / len(sentiment_scores)
+            avg_confidence = (
+                sum(confidence_scores) / len(confidence_scores)
+                if confidence_scores
+                else 0
+            )
+
+            from rich.table import Table
+
+            # Statistics table
+            stats_table = Table(title="📊 Sentiment Statistics")
+            stats_table.add_column("Metric", style="cyan")
+            stats_table.add_column("Value", style="green")
+
+            stats_table.add_row("Average Sentiment Score", f"{avg_sentiment:.3f}")
+            stats_table.add_row("Average Confidence", f"{avg_confidence:.1%}")
+            stats_table.add_row("Total Analyzed Posts", str(len(posts_with_sentiment)))
+
+            sentiment_label = (
+                "Positive"
+                if avg_sentiment > 0.05
+                else "Negative"
+                if avg_sentiment < -0.05
+                else "Neutral"
+            )
+            stats_table.add_row("Overall Sentiment", sentiment_label)
+
+            console.print(stats_table)
+
+            # Sample posts table
+            for sentiment, posts_list in sample_posts.items():
+                if posts_list:
+                    sample_table = Table(
+                        title=f"💬 Sample {sentiment.capitalize()} Posts"
+                    )
+                    sample_table.add_column("Post Title", style="cyan", max_width=60)
+                    sample_table.add_column("Score", style="green")
+
+                    for post_info in posts_list:
+                        sample_table.add_row(
+                            post_info["title"], f"{post_info['score']:.3f}"
+                        )
+
+                    console.print(sample_table)
+
+        # Confidence distribution
+        if confidence_scores:
+            high_conf = sum(1 for c in confidence_scores if c >= 0.8)
+            med_conf = sum(1 for c in confidence_scores if 0.5 <= c < 0.8)
+            low_conf = sum(1 for c in confidence_scores if c < 0.5)
+
+            conf_table = Table(title="🎯 Confidence Distribution")
+            conf_table.add_column("Confidence Level", style="cyan")
+            conf_table.add_column("Count", style="green")
+            conf_table.add_column("Percentage", style="yellow")
+
+            total = len(confidence_scores)
+            conf_table.add_row(
+                "High (≥80%)", str(high_conf), f"{high_conf / total * 100:.1f}%"
+            )
+            conf_table.add_row(
+                "Medium (50-79%)", str(med_conf), f"{med_conf / total * 100:.1f}%"
+            )
+            conf_table.add_row(
+                "Low (<50%)", str(low_conf), f"{low_conf / total * 100:.1f}%"
+            )
+
+            console.print(conf_table)
 
         # Export if requested
         if export:
@@ -209,7 +311,9 @@ def show_activity(
 
         if subreddit:
             subreddit_obj = (
-                db.query(Subreddit).filter(Subreddit.name == subreddit).first()
+                db.query(Subreddit)
+                .filter(func.lower(Subreddit.name) == subreddit.lower())
+                .first()
             )
             if not subreddit_obj:
                 console.print(f"❌ Subreddit r/{subreddit} not found", style="red")
@@ -296,7 +400,9 @@ def compare_subreddits(
 
         for subreddit_name in subreddit_names:
             subreddit_obj = (
-                db.query(Subreddit).filter(Subreddit.name == subreddit_name).first()
+                db.query(Subreddit)
+                .filter(func.lower(Subreddit.name) == subreddit_name.lower())
+                .first()
             )
 
             if not subreddit_obj:

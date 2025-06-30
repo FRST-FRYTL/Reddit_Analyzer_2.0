@@ -9,6 +9,7 @@ A comprehensive data analysis application for collecting, processing, and analyz
 - **Reddit API Integration**: Seamless data collection using PRAW (Python Reddit API Wrapper)
 - **Database Management**: PostgreSQL with SQLAlchemy ORM for reliable data storage
 - **Data Processing**: Structured analysis of posts, comments, users, and subreddits
+- **NLP Analysis**: Sentiment analysis, keyword extraction, topic modeling, and emotion detection
 - **Caching Layer**: Redis integration for improved performance
 - **Command Line Interface**: Comprehensive CLI for data visualization and management
 - **Authentication System**: JWT-based authentication with role-based access control
@@ -102,6 +103,119 @@ uv run reddit-analyzer admin users
 uv run reddit-analyzer admin health-check
 ```
 
+## NLP Features Installation
+
+The Reddit Analyzer includes advanced NLP capabilities. Basic sentiment analysis works out of the box, but for full functionality, additional models are required.
+
+### Basic NLP (Included)
+- **VADER Sentiment**: Rule-based sentiment analysis
+- **TextBlob**: Simple text processing and sentiment
+- **Basic keyword extraction**: TF-IDF based
+
+### Enhanced NLP Setup
+
+#### 1. Install spaCy Language Model (Recommended)
+```bash
+# Install English language model (~13 MB)
+uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+
+# For better accuracy (medium model, ~40 MB)
+uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_md-3.8.0/en_core_web_md-3.8.0-py3-none-any.whl
+
+# For best results (large model, ~750 MB)
+uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
+```
+
+This enables:
+- Named entity recognition
+- Advanced keyword extraction
+- Part-of-speech tagging
+- Dependency parsing
+
+#### 2. Install Transformers for Deep Learning Models (Optional)
+
+⚠️ **Note**: This requires ~2-3 GB of disk space and significant download time.
+
+```bash
+# Option 1: CPU-only PyTorch (smaller, ~750 MB)
+uv add torch --index-url https://download.pytorch.org/whl/cpu
+uv add transformers
+
+# Option 2: Full PyTorch with CUDA support (larger, ~2 GB)
+uv add torch transformers
+
+# Download a specific model (e.g., DistilBERT for sentiment, ~250 MB)
+python -c "from transformers import pipeline; pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')"
+```
+
+This enables:
+- State-of-the-art sentiment analysis
+- Emotion detection
+- Zero-shot classification
+- Advanced text embeddings
+
+#### 3. Recommended Model Configurations
+
+For different use cases:
+
+**Minimal Setup** (Default):
+- Works out of the box
+- Uses VADER + TextBlob
+- No additional downloads
+
+**Standard Setup** (Recommended):
+```bash
+# Install spaCy small model
+uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_sm-3.8.0/en_core_web_sm-3.8.0-py3-none-any.whl
+```
+
+**Advanced Setup** (Best accuracy):
+```bash
+# Install spaCy large model
+uv pip install https://github.com/explosion/spacy-models/releases/download/en_core_web_lg-3.8.0/en_core_web_lg-3.8.0-py3-none-any.whl
+
+# Install transformers with CPU-only PyTorch
+uv add torch --index-url https://download.pytorch.org/whl/cpu
+uv add transformers
+
+# Pre-download models
+python -c "
+from transformers import pipeline
+# Sentiment analysis model
+pipeline('sentiment-analysis', model='distilbert-base-uncased-finetuned-sst-2-english')
+# Emotion detection model
+pipeline('text-classification', model='j-hartmann/emotion-english-distilroberta-base')
+"
+```
+
+### Verifying NLP Installation
+
+Check which NLP features are available:
+```bash
+# Check NLP status
+uv run python -c "
+from reddit_analyzer.services.nlp_service import get_nlp_service
+nlp = get_nlp_service()
+print('NLP Service initialized successfully')
+"
+
+# Test sentiment analysis
+uv run reddit-analyzer nlp analyze --subreddit python --limit 1
+```
+
+### Troubleshooting NLP
+
+**"No module named spacy model"**: Install the spaCy model as shown above
+
+**"Transformers not available"**: This is normal if you haven't installed PyTorch. Basic sentiment analysis still works.
+
+**Out of memory**: Use smaller models (distilbert instead of bert-base) or CPU-only PyTorch
+
+**Slow processing**:
+- Use `--skip-nlp` flag during data collection for faster processing
+- Process in smaller batches with `--limit` flag
+- Consider using GPU if available
+
 ### Development
 
 **Install dependencies**:
@@ -160,6 +274,11 @@ reddit_analyzer/
 - **Caching**: Redis
 - **Authentication**: JWT tokens with bcrypt password hashing
 - **Reddit API**: PRAW (Python Reddit API Wrapper)
+- **NLP Stack**:
+  - VADER & TextBlob for sentiment analysis
+  - spaCy for NER and keyword extraction (optional)
+  - Transformers for deep learning models (optional)
+  - scikit-learn for topic modeling
 - **Package Management**: uv
 - **Testing**: pytest with coverage
 - **Code Quality**: Black, Ruff, pre-commit hooks
@@ -217,6 +336,15 @@ uv run reddit-analyzer viz activity --subreddit NAME [--period P] # Activity tre
 uv run reddit-analyzer report daily --subreddit NAME [--date DATE]     # Daily report
 uv run reddit-analyzer report weekly --subreddit NAME [--weeks N]      # Weekly report
 uv run reddit-analyzer report export --format FORMAT --output FILE     # Export data
+```
+
+### NLP Commands
+```bash
+uv run reddit-analyzer nlp analyze --subreddit NAME [--limit N]        # Analyze posts without NLP data
+uv run reddit-analyzer nlp topics SUBREDDIT --num-topics N            # Discover topics
+uv run reddit-analyzer nlp keywords SUBREDDIT --top-n N               # Extract keywords
+uv run reddit-analyzer nlp emotions --subreddit NAME                  # Analyze emotions
+uv run reddit-analyzer nlp export SUBREDDIT --format csv --output FILE # Export NLP results
 ```
 
 ### Admin Commands (Admin role required)

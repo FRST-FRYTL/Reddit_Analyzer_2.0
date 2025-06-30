@@ -8,6 +8,7 @@ from reddit_analyzer.cli.data import data_app
 from reddit_analyzer.cli.visualization import viz_app
 from reddit_analyzer.cli.reports import report_app
 from reddit_analyzer.cli.admin import admin_app
+from reddit_analyzer.cli.nlp import nlp_app
 
 app = typer.Typer(
     name="reddit-analyzer",
@@ -24,6 +25,7 @@ app.add_typer(data_app, name="data")
 app.add_typer(viz_app, name="viz")
 app.add_typer(report_app, name="report")
 app.add_typer(admin_app, name="admin")
+app.add_typer(nlp_app, name="nlp")
 
 
 @app.command()

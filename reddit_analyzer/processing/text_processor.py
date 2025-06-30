@@ -11,7 +11,6 @@ from typing import Dict, List, Any
 import spacy
 from spacy.lang.en.stop_words import STOP_WORDS
 import nltk
-from textblob import TextBlob
 
 logger = logging.getLogger(__name__)
 
@@ -267,8 +266,9 @@ class TextProcessor:
             return "unknown"
 
         try:
-            blob = TextBlob(text)
-            return blob.detect_language()
+            # TextBlob's detect_language may not be available in all installations
+            # For now, default to English
+            return "en"
         except Exception as e:
             logger.warning(f"Language detection failed: {e}")
             return "en"  # Default to English

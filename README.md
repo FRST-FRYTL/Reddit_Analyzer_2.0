@@ -82,6 +82,21 @@ uv run reddit-analyzer auth login --username your_username --password your_passw
 uv run reddit-analyzer status
 ```
 
+**Collect data from Reddit**:
+```bash
+# Collect posts from a subreddit
+uv run reddit-analyzer data collect python --limit 100
+
+# Collect without NLP analysis (faster)
+uv run reddit-analyzer data collect javascript --skip-nlp
+
+# Collect newest posts
+uv run reddit-analyzer data collect datascience --sort new --limit 50
+
+# Check data collection status
+uv run reddit-analyzer data status
+```
+
 **Analyze data**:
 ```bash
 uv run reddit-analyzer viz trends --subreddit python --days 7

@@ -60,8 +60,9 @@ uv run reddit-analyzer auth status
 uv run reddit-analyzer auth whoami
 
 # Data Collection
-uv run reddit-analyzer data collect --subreddit python --limit 100
-uv run reddit-analyzer data collect --subreddit javascript --skip-nlp
+uv run reddit-analyzer data collect python --limit 100
+uv run reddit-analyzer data collect javascript --skip-nlp
+uv run reddit-analyzer data collect datascience --sort new --limit 50
 uv run reddit-analyzer data status
 uv run reddit-analyzer data health
 

@@ -2,7 +2,7 @@
 
 A comprehensive data analysis application for collecting, processing, and analyzing Reddit data using the Reddit API.
 
-> 🚀 **Phase 4B Update**: Now using standard Python package structure with root-level CLI access. All commands use `uv run` for simplified development workflow.
+> 🚀 **Phase 4D Update**: New political analysis features for topic detection, multi-dimensional political analysis, and discussion quality metrics. See [Political Analysis](#political-analysis) section below.
 
 ## Features
 
@@ -13,6 +13,7 @@ A comprehensive data analysis application for collecting, processing, and analyz
 - **Caching Layer**: Redis integration for improved performance
 - **Command Line Interface**: Comprehensive CLI for data visualization and management
 - **Authentication System**: JWT-based authentication with role-based access control
+- **Political Analysis**: Topic detection, multi-dimensional political analysis, and discussion quality metrics
 - **Testing Suite**: Comprehensive test coverage with pytest
 - **Code Quality**: Automated formatting (Black) and linting (Ruff)
 
@@ -102,6 +103,11 @@ uv run reddit-analyzer data status
 uv run reddit-analyzer viz trends --subreddit python --days 7
 uv run reddit-analyzer viz sentiment javascript
 uv run reddit-analyzer viz activity --subreddit datascience
+
+# Political analysis
+uv run reddit-analyzer analyze topics politics --days 30
+uv run reddit-analyzer analyze dimensions worldnews
+uv run reddit-analyzer analyze political-diversity moderatepolitics
 ```
 
 **Generate reports**:
@@ -264,9 +270,14 @@ reddit_analyzer/
 │   │   ├── visualization.py # Visualization commands
 │   │   ├── reports.py       # Report generation commands
 │   │   ├── admin.py         # Admin commands
+│   │   ├── analyze.py       # Political analysis commands
 │   │   └── utils/           # CLI utilities and ASCII charts
 │   ├── models/               # Database models
 │   ├── services/             # Business logic
+│   │   ├── topic_analyzer.py           # Political topic analysis
+│   │   └── political_dimensions_analyzer.py # Multi-dimensional analysis
+│   ├── data/                 # Static data and taxonomies
+│   │   └── political_topics.py # Political topic definitions
 │   ├── utils/                # Utility functions
 │   ├── config.py             # Configuration management
 │   └── database.py           # Database setup
@@ -320,6 +331,10 @@ REDIS_URL=redis://localhost:6379/0
 SECRET_KEY=your_secret_key_here
 ACCESS_TOKEN_EXPIRE_MINUTES=30
 REFRESH_TOKEN_EXPIRE_DAYS=7
+
+# Political Analysis (Optional)
+MIN_USERS_FOR_ANALYSIS=25
+MIN_TIME_WINDOW_DAYS=7
 ```
 
 ## CLI Commands Reference
@@ -362,6 +377,17 @@ uv run reddit-analyzer nlp emotions --subreddit NAME                  # Analyze 
 uv run reddit-analyzer nlp export SUBREDDIT --format csv --output FILE # Export NLP results
 ```
 
+### Political Analysis Commands
+```bash
+uv run reddit-analyzer analyze topics SUBREDDIT [--days N]            # Analyze political topics
+uv run reddit-analyzer analyze sentiment SUBREDDIT --topic TOPIC      # Topic-specific sentiment
+uv run reddit-analyzer analyze quality SUBREDDIT [--min-comments N]   # Discussion quality metrics
+uv run reddit-analyzer analyze overlap SUBREDDIT1 SUBREDDIT2          # Community comparison
+uv run reddit-analyzer analyze dimensions SUBREDDIT [--save]          # Multi-dimensional political analysis
+uv run reddit-analyzer analyze political-compass SUBREDDIT            # Generate political compass
+uv run reddit-analyzer analyze political-diversity SUBREDDIT          # Analyze political diversity
+```
+
 ### Admin Commands (Admin role required)
 ```bash
 uv run reddit-analyzer admin stats        # System statistics
@@ -384,6 +410,10 @@ The application uses a normalized relational database with the following core en
 - **Subreddits**: Community metadata and statistics
 - **Posts**: Reddit submissions with scores and metadata
 - **Comments**: Threaded comments with relationships
+- **TextAnalysis**: NLP analysis results including sentiment and political topics
+- **PoliticalDimensionsAnalysis**: Multi-dimensional political scoring
+- **SubredditTopicProfile**: Aggregate political topic analysis
+- **SubredditPoliticalDimensions**: Community-level political metrics
 
 ## Testing
 
@@ -417,6 +447,90 @@ uv run pytest tests/test_models.py
 2. Add tests for new functionality
 3. Ensure all tests pass before committing
 4. Use descriptive commit messages
+
+## Political Analysis
+
+The Reddit Analyzer includes comprehensive political analysis capabilities designed for research and understanding political discourse patterns. All analysis is performed at the aggregate level with strong privacy protections.
+
+### Features
+
+#### Political Topic Detection
+- Identifies 9 major political topics: Healthcare, Economy, Climate, Immigration, Education, Foreign Policy, Social Issues, Technology, Democracy
+- Keyword-based detection with confidence scoring
+- Topic-specific sentiment analysis
+
+#### Multi-Dimensional Political Analysis
+Instead of oversimplified left-right classification, the system uses three dimensions:
+- **Economic**: Market-oriented ↔ Planned economy
+- **Social**: Individual liberty ↔ Social authority
+- **Governance**: Decentralized ↔ Centralized power
+
+Each dimension includes:
+- Score from -1.0 to +1.0
+- Confidence level
+- Evidence tracking (keywords/phrases that influenced the score)
+- Human-readable labels
+
+#### Discussion Quality Metrics
+- **Civility Score**: Measures respectful discourse
+- **Constructiveness**: Evaluates substantive contributions
+- **Viewpoint Diversity**: Assesses range of perspectives
+- **Engagement Quality**: Tracks positive interactions
+
+#### Community Analysis
+- User overlap detection between subreddits
+- Political topic comparison across communities
+- Political diversity index calculation
+- Clustering to identify distinct political groups
+
+### Privacy and Ethics
+
+All political analysis follows strict ethical guidelines:
+- **Aggregate Only**: No individual user analysis or scoring
+- **Minimum Thresholds**: Requires 25+ users for any analysis
+- **Time Windows**: Minimum 7-day aggregation periods
+- **No User Tracking**: Analysis at content level only
+- **Opt-Out Support**: Subreddits can request exclusion
+- **Transparency**: All outputs include confidence levels and limitations
+
+### Example Usage
+
+```bash
+# Analyze political topics in r/politics over 30 days
+uv run reddit-analyzer analyze topics politics --days 30
+
+# Get topic-specific sentiment for healthcare discussions
+uv run reddit-analyzer analyze sentiment politics --topic healthcare
+
+# Generate political compass visualization
+uv run reddit-analyzer analyze political-compass worldnews
+
+# Compare political communities
+uv run reddit-analyzer analyze overlap conservative liberal
+
+# Analyze political diversity
+uv run reddit-analyzer analyze political-diversity moderatepolitics
+```
+
+### Output Example
+
+```
+Political Topics in r/politics (2024-01-01 to 2024-01-31)
+=========================================================
+
+Healthcare    : ████████████████ (32%) [+0.3 sentiment]
+Economy       : ██████████ (20%) [-0.1 sentiment]
+Climate       : ████████ (16%) [+0.5 sentiment]
+Immigration   : ██████ (12%) [-0.2 sentiment]
+Education     : █████ (10%) [+0.2 sentiment]
+
+Discussion Quality: 0.72/1.0 (Good)
+- Civility: 0.85
+- Constructiveness: 0.68
+- Viewpoint Diversity: 0.63
+
+Confidence Level: 82% (1,234 posts analyzed)
+```
 
 ## License
 

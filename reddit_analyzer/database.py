@@ -1,5 +1,7 @@
 """Database configuration and connection management."""
 
+from contextlib import contextmanager
+
 from sqlalchemy import create_engine, MetaData
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker
@@ -52,3 +54,13 @@ def create_tables():
 def drop_tables():
     """Drop all tables."""
     Base.metadata.drop_all(bind=engine)
+
+
+@contextmanager
+def get_session():
+    """Get database session as a context manager for CLI usage."""
+    session = SessionLocal()
+    try:
+        yield session
+    finally:
+        session.close()

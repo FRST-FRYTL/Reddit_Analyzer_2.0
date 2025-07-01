@@ -147,3 +147,6 @@ class CLIAuth:
 
 # Global auth instance
 cli_auth = CLIAuth()
+
+# Export require_auth at module level for easier imports
+require_auth = cli_auth.require_auth

@@ -18,9 +18,7 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    logging.warning(
-        "Transformers library not available. Transformer-based sentiment analysis disabled."
-    )
+    # Don't warn at import time - only warn if transformers are actually requested
 
 logger = logging.getLogger(__name__)
 
@@ -48,6 +46,13 @@ class SentimentAnalyzer:
             ensemble_weights: Weights for ensemble scoring (vader, textblob, transformer)
         """
         self.use_transformers = use_transformers and TRANSFORMERS_AVAILABLE
+
+        # Warn only if transformers were requested but not available
+        if use_transformers and not TRANSFORMERS_AVAILABLE:
+            logger.warning(
+                "Transformers library not available. Transformer-based sentiment analysis disabled. "
+                "Install with: uv sync --extra nlp-enhanced"
+            )
         self.transformer_model_name = transformer_model
 
         # Default ensemble weights

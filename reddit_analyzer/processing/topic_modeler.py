@@ -37,9 +37,7 @@ try:
     TRANSFORMERS_AVAILABLE = True
 except ImportError:
     TRANSFORMERS_AVAILABLE = False
-    logging.warning(
-        "Transformers/UMAP not available. BERT-based topic modeling disabled."
-    )
+    # Don't warn at import time - only warn if BERT topic modeling is actually requested
 
 logger = logging.getLogger(__name__)
 
@@ -102,16 +100,25 @@ class TopicModeler:
             )
             logger.info("Initialized LDA vectorizer")
 
-        if self.method in ["bert", "combined"] and TRANSFORMERS_AVAILABLE:
-            try:
-                model_name = "sentence-transformers/all-MiniLM-L6-v2"
-                self.bert_tokenizer = AutoTokenizer.from_pretrained(model_name)
-                self.bert_model = AutoModel.from_pretrained(model_name)
-                logger.info(f"Initialized BERT model: {model_name}")
-            except Exception as e:
-                logger.warning(f"Failed to initialize BERT model: {e}")
+        if self.method in ["bert", "combined"]:
+            if not TRANSFORMERS_AVAILABLE:
+                logger.warning(
+                    "Transformers/UMAP not available. BERT-based topic modeling disabled. "
+                    "Install with: uv sync --extra nlp-enhanced"
+                )
                 if self.method == "bert":
                     self.method = "lda"  # Fallback to LDA
+                    logger.info("Falling back to LDA topic modeling")
+            else:
+                try:
+                    model_name = "sentence-transformers/all-MiniLM-L6-v2"
+                    self.bert_tokenizer = AutoTokenizer.from_pretrained(model_name)
+                    self.bert_model = AutoModel.from_pretrained(model_name)
+                    logger.info(f"Initialized BERT model: {model_name}")
+                except Exception as e:
+                    logger.warning(f"Failed to initialize BERT model: {e}")
+                    if self.method == "bert":
+                        self.method = "lda"  # Fallback to LDA
 
     def preprocess_texts(self, texts: List[str]) -> List[str]:
         """

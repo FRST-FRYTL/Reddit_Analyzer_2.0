@@ -3,21 +3,43 @@
 import typer
 from rich.console import Console
 
-from reddit_analyzer.cli.auth import auth_app
-from reddit_analyzer.cli.data import data_app
-from reddit_analyzer.cli.visualization import viz_app
-from reddit_analyzer.cli.reports import report_app
-from reddit_analyzer.cli.admin import admin_app
-from reddit_analyzer.cli.nlp import nlp_app
+# Configure logging before importing other modules
+from reddit_analyzer.cli.utils.logging_config import suppress_startup_warnings
+
+suppress_startup_warnings()
+
+from reddit_analyzer.cli.admin import admin_app  # noqa: E402
+from reddit_analyzer.cli.auth import auth_app  # noqa: E402
+from reddit_analyzer.cli.data import data_app  # noqa: E402
+from reddit_analyzer.cli.nlp import nlp_app  # noqa: E402
+from reddit_analyzer.cli.reports import report_app  # noqa: E402
+from reddit_analyzer.cli.visualization import viz_app  # noqa: E402
 
 app = typer.Typer(
     name="reddit-analyzer",
     help="Reddit Analyzer CLI - Data exploration and visualization tool",
     add_completion=True,
     rich_markup_mode="rich",
+    context_settings={"help_option_names": ["-h", "--help"]},
 )
 
 console = Console()
+
+# Global options
+verbose_option = typer.Option(False, "--verbose", "-v", help="Enable verbose output")
+quiet_option = typer.Option(False, "--quiet", "-q", help="Suppress most output")
+
+
+@app.callback()
+def main_callback(
+    verbose: bool = verbose_option,
+    quiet: bool = quiet_option,
+):
+    """Configure global settings for the CLI."""
+    from reddit_analyzer.cli.utils.logging_config import configure_cli_logging
+
+    configure_cli_logging(verbose=verbose, quiet=quiet)
+
 
 # Add command groups
 app.add_typer(auth_app, name="auth")

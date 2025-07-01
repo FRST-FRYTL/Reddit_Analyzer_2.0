@@ -17,7 +17,7 @@ engine = create_engine(
     connect_args=(
         {"check_same_thread": False} if "sqlite" in config.DATABASE_URL else {}
     ),
-    echo=config.DEBUG if hasattr(config, "DEBUG") else False,
+    echo=False,  # Disable SQLAlchemy echo - use logging config instead
 )
 
 SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)

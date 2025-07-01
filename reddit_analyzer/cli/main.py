@@ -14,6 +14,7 @@ from reddit_analyzer.cli.data import data_app  # noqa: E402
 from reddit_analyzer.cli.nlp import nlp_app  # noqa: E402
 from reddit_analyzer.cli.reports import report_app  # noqa: E402
 from reddit_analyzer.cli.visualization import viz_app  # noqa: E402
+from reddit_analyzer.cli.analyze import app as analyze_app  # noqa: E402
 
 app = typer.Typer(
     name="reddit-analyzer",
@@ -48,6 +49,7 @@ app.add_typer(viz_app, name="viz")
 app.add_typer(report_app, name="report")
 app.add_typer(admin_app, name="admin")
 app.add_typer(nlp_app, name="nlp")
+app.add_typer(analyze_app, name="analyze")
 
 
 @app.command()

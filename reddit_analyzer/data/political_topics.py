@@ -1,0 +1,306 @@
+"""Political topics taxonomy for topic analysis."""
+
+from typing import Dict, List
+
+POLITICAL_TOPIC_TAXONOMY: Dict[str, Dict[str, List[str]]] = {
+    "healthcare": {
+        "keywords": [
+            "healthcare",
+            "health care",
+            "insurance",
+            "medicare",
+            "medicaid",
+            "ACA",
+            "obamacare",
+            "affordable care act",
+            "hospital",
+            "doctor",
+            "prescription",
+            "pharmaceutical",
+            "medical",
+            "health coverage",
+            "single payer",
+            "universal healthcare",
+            "public option",
+        ],
+        "subtopics": [
+            "public_option",
+            "single_payer",
+            "prescription_drugs",
+            "mental_health",
+            "pandemic_response",
+            "medical_costs",
+        ],
+    },
+    "economy": {
+        "keywords": [
+            "economy",
+            "economic",
+            "jobs",
+            "unemployment",
+            "inflation",
+            "wages",
+            "salary",
+            "income",
+            "GDP",
+            "recession",
+            "growth",
+            "market",
+            "stock",
+            "trade",
+            "tariff",
+            "budget",
+            "debt",
+            "tax",
+            "taxation",
+            "fiscal",
+            "monetary",
+            "federal reserve",
+        ],
+        "subtopics": [
+            "taxation",
+            "minimum_wage",
+            "trade_policy",
+            "regulation",
+            "unemployment_benefits",
+            "stimulus",
+            "inflation_control",
+        ],
+    },
+    "climate": {
+        "keywords": [
+            "climate",
+            "climate change",
+            "global warming",
+            "environment",
+            "environmental",
+            "emissions",
+            "carbon",
+            "renewable",
+            "solar",
+            "wind",
+            "fossil fuel",
+            "green new deal",
+            "paris agreement",
+            "sustainability",
+            "pollution",
+            "clean energy",
+            "electric vehicle",
+        ],
+        "subtopics": [
+            "paris_agreement",
+            "green_energy",
+            "carbon_tax",
+            "emissions_reduction",
+            "renewable_transition",
+            "environmental_protection",
+        ],
+    },
+    "immigration": {
+        "keywords": [
+            "immigration",
+            "immigrant",
+            "border",
+            "asylum",
+            "refugee",
+            "visa",
+            "citizenship",
+            "deportation",
+            "ICE",
+            "customs",
+            "DACA",
+            "dreamers",
+            "wall",
+            "sanctuary",
+            "naturalization",
+            "green card",
+            "illegal immigration",
+            "undocumented",
+        ],
+        "subtopics": [
+            "border_security",
+            "pathway_citizenship",
+            "asylum_reform",
+            "skilled_immigration",
+            "family_reunification",
+            "deportation_policy",
+        ],
+    },
+    "education": {
+        "keywords": [
+            "education",
+            "school",
+            "student",
+            "teacher",
+            "university",
+            "college",
+            "tuition",
+            "loan",
+            "debt",
+            "curriculum",
+            "charter",
+            "public school",
+            "private school",
+            "standardized test",
+            "common core",
+            "stem",
+            "liberal arts",
+            "vocational",
+        ],
+        "subtopics": [
+            "student_loans",
+            "school_choice",
+            "teacher_pay",
+            "curriculum_reform",
+            "higher_education",
+            "vocational_training",
+            "education_funding",
+        ],
+    },
+    "foreign_policy": {
+        "keywords": [
+            "foreign policy",
+            "military",
+            "defense",
+            "war",
+            "peace",
+            "NATO",
+            "UN",
+            "united nations",
+            "diplomacy",
+            "sanctions",
+            "alliance",
+            "intervention",
+            "troops",
+            "veterans",
+            "conflict",
+            "international",
+            "treaty",
+            "ambassador",
+            "embassy",
+        ],
+        "subtopics": [
+            "military_spending",
+            "alliance_relations",
+            "trade_agreements",
+            "humanitarian_intervention",
+            "veterans_affairs",
+            "nuclear_policy",
+        ],
+    },
+    "social_issues": {
+        "keywords": [
+            "abortion",
+            "gun",
+            "second amendment",
+            "LGBT",
+            "LGBTQ",
+            "marriage",
+            "religious freedom",
+            "discrimination",
+            "equality",
+            "civil rights",
+            "protest",
+            "police",
+            "criminal justice",
+            "prison",
+            "death penalty",
+            "marijuana",
+            "drug policy",
+        ],
+        "subtopics": [
+            "reproductive_rights",
+            "gun_control",
+            "lgbtq_rights",
+            "criminal_justice_reform",
+            "drug_legalization",
+            "police_reform",
+        ],
+    },
+    "technology": {
+        "keywords": [
+            "technology",
+            "tech",
+            "internet",
+            "privacy",
+            "data",
+            "social media",
+            "AI",
+            "artificial intelligence",
+            "automation",
+            "cybersecurity",
+            "encryption",
+            "surveillance",
+            "platform",
+            "antitrust",
+            "monopoly",
+            "regulation",
+            "innovation",
+        ],
+        "subtopics": [
+            "data_privacy",
+            "tech_regulation",
+            "ai_ethics",
+            "cybersecurity",
+            "digital_rights",
+            "platform_accountability",
+            "innovation_policy",
+        ],
+    },
+    "democracy": {
+        "keywords": [
+            "democracy",
+            "voting",
+            "election",
+            "voter",
+            "ballot",
+            "gerrymandering",
+            "campaign finance",
+            "lobbying",
+            "corruption",
+            "transparency",
+            "accountability",
+            "reform",
+            "filibuster",
+            "supreme court",
+            "judicial",
+            "constitutional",
+            "rights",
+        ],
+        "subtopics": [
+            "voting_rights",
+            "campaign_finance_reform",
+            "gerrymandering",
+            "judicial_reform",
+            "government_transparency",
+            "electoral_reform",
+        ],
+    },
+}
+
+
+def get_all_topics() -> List[str]:
+    """Get list of all main political topics."""
+    return list(POLITICAL_TOPIC_TAXONOMY.keys())
+
+
+def get_topic_keywords(topic: str) -> List[str]:
+    """Get keywords for a specific topic."""
+    if topic in POLITICAL_TOPIC_TAXONOMY:
+        return POLITICAL_TOPIC_TAXONOMY[topic]["keywords"]
+    return []
+
+
+def get_topic_subtopics(topic: str) -> List[str]:
+    """Get subtopics for a specific topic."""
+    if topic in POLITICAL_TOPIC_TAXONOMY:
+        return POLITICAL_TOPIC_TAXONOMY[topic]["subtopics"]
+    return []
+
+
+def get_all_political_keywords() -> List[str]:
+    """Get all political keywords across all topics."""
+    all_keywords = []
+    for topic_data in POLITICAL_TOPIC_TAXONOMY.values():
+        all_keywords.extend(topic_data["keywords"])
+    return list(set(all_keywords))  # Remove duplicates

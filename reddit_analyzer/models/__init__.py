@@ -18,6 +18,12 @@ from reddit_analyzer.models.topic import Topic
 from reddit_analyzer.models.user_metric import UserMetric
 from reddit_analyzer.models.subreddit_analytics import SubredditAnalytics
 from reddit_analyzer.models.ml_prediction import MLPrediction
+from reddit_analyzer.models.political_analysis import (
+    SubredditTopicProfile,
+    CommunityOverlap,
+    PoliticalDimensionsAnalysis,
+    SubredditPoliticalDimensions,
+)
 
 __all__ = [
     "Base",
@@ -38,4 +44,8 @@ __all__ = [
     "UserMetric",
     "SubredditAnalytics",
     "MLPrediction",
+    "SubredditTopicProfile",
+    "CommunityOverlap",
+    "PoliticalDimensionsAnalysis",
+    "SubredditPoliticalDimensions",
 ]

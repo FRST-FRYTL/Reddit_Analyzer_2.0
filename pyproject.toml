@@ -20,6 +20,9 @@ dependencies = [
     "vadersentiment>=3.3.2",
     "scikit-learn>=1.6.1",
     "passlib[bcrypt]>=1.7.4",
+    "transformers>=4.53.0",
+    "torch>=2.7.1",
+    "structlog>=25.4.0",
 ]
 
 [project.optional-dependencies]

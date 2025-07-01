@@ -54,6 +54,9 @@ class TextAnalysis(Base):
     # Relationships
     post = relationship("Post", back_populates="text_analysis")
     comment = relationship("Comment", back_populates="text_analysis")
+    political_dimensions = relationship(
+        "PoliticalDimensionsAnalysis", back_populates="text_analysis", uselist=False
+    )
 
     def __repr__(self):
         return f"<TextAnalysis(id={self.id}, sentiment={self.sentiment_label}, quality={self.quality_score})>"

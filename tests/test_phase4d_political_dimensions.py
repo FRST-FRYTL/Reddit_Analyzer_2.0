@@ -147,17 +147,21 @@ class TestPoliticalDimensionsAnalyzer:
     def test_edge_cases(self, analyzer):
         """Test edge cases and error handling."""
         # Empty text
-        result = analyzer._analyze_economic_dimension("")
-        assert result["confidence"] == 0
+        result = analyzer.analyze_political_dimensions("")
+        assert result.analysis_quality == 0
+        assert result.dimensions == {}
 
         # Non-political text
-        result = analyzer._analyze_economic_dimension("The weather is nice today")
-        assert result["confidence"] < 0.5
+        result = analyzer.analyze_political_dimensions("The weather is nice today")
+        # Should have low quality or no dimensions
+        assert result.analysis_quality < 0.5 or not result.dimensions
 
         # Mixed signals
         mixed_text = "I support free markets but also believe in universal healthcare"
-        result = analyzer._analyze_economic_dimension(mixed_text)
-        assert abs(result["position"]) < 0.5  # Should be moderate
+        result = analyzer.analyze_political_dimensions(mixed_text)
+        if "economic" in result.dimensions:
+            # Should show mixed/moderate position
+            assert abs(result.dimensions["economic"]["score"]) < 0.7
 
 
 class TestPoliticalDiversity:

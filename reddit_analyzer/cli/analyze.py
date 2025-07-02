@@ -24,7 +24,7 @@ from reddit_analyzer.services.political_dimensions_analyzer import (
     calculate_political_diversity,
     identify_political_clusters,
 )
-from reddit_analyzer.cli.utils.auth_manager import require_auth
+from reddit_analyzer.cli.utils.auth_manager import cli_auth
 import structlog
 
 logger = structlog.get_logger(__name__)
@@ -53,7 +53,7 @@ def _validate_subreddit(subreddit_name: str) -> Optional[Subreddit]:
 
 
 @app.command(name="topics")
-@require_auth
+@cli_auth.require_auth()
 def analyze_topics(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
@@ -63,7 +63,6 @@ def analyze_topics(
     save_report: Optional[str] = typer.Option(
         None, "--save", "-s", help="Save report to file"
     ),
-    ctx: typer.Context = typer.Context,
 ):
     """Analyze political topics in a subreddit."""
     # Validate subreddit
@@ -212,14 +211,13 @@ def analyze_topics(
 
 
 @app.command(name="sentiment")
-@require_auth
+@cli_auth.require_auth()
 def analyze_sentiment(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     topic: str = typer.Option(
         ..., "--topic", "-t", help="Political topic to analyze sentiment for"
     ),
     days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
-    ctx: typer.Context = typer.Context,
 ):
     """Analyze sentiment around a specific political topic."""
     from reddit_analyzer.data.political_topics import get_all_topics
@@ -291,14 +289,13 @@ def analyze_sentiment(
 
 
 @app.command(name="quality")
-@require_auth
+@cli_auth.require_auth()
 def analyze_quality(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     min_comments: int = typer.Option(
         50, "--min-comments", "-m", help="Minimum comments per post"
     ),
     days: int = typer.Option(7, "--days", "-d", help="Number of days to analyze"),
-    ctx: typer.Context = typer.Context,
 ):
     """Assess discussion quality in a subreddit."""
     # Validate subreddit
@@ -374,14 +371,13 @@ def analyze_quality(
 
 
 @app.command(name="overlap")
-@require_auth
+@cli_auth.require_auth()
 def analyze_overlap(
     subreddit1: str = typer.Argument(..., help="First subreddit"),
     subreddit2: str = typer.Argument(..., help="Second subreddit"),
     include_topics: bool = typer.Option(
         True, "--include-topics", help="Include shared topics analysis"
     ),
-    ctx: typer.Context = typer.Context,
 ):
     """Compare community overlap between two subreddits."""
     # Validate subreddits
@@ -763,7 +759,7 @@ def _display_overlap_analysis(
 
 
 @app.command(name="dimensions")
-@require_auth
+@cli_auth.require_auth()
 def analyze_dimensions(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
@@ -773,7 +769,6 @@ def analyze_dimensions(
     save_analysis: bool = typer.Option(
         False, "--save", "-s", help="Save analysis to database"
     ),
-    ctx: typer.Context = typer.Context,
 ):
     """Analyze political dimensions of a subreddit."""
     # Validate subreddit
@@ -872,14 +867,13 @@ def analyze_dimensions(
 
 
 @app.command(name="political-compass")
-@require_auth
+@cli_auth.require_auth()
 def political_compass(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
     output: Optional[str] = typer.Option(
         None, "--output", "-o", help="Save visualization to file"
     ),
-    ctx: typer.Context = typer.Context,
 ):
     """Generate political compass visualization for a subreddit."""
     # Validate subreddit
@@ -910,11 +904,10 @@ def political_compass(
 
 
 @app.command(name="political-diversity")
-@require_auth
+@cli_auth.require_auth()
 def analyze_political_diversity(
     subreddit: str = typer.Argument(..., help="Subreddit to analyze"),
     days: int = typer.Option(30, "--days", "-d", help="Number of days to analyze"),
-    ctx: typer.Context = typer.Context,
 ):
     """Analyze political diversity in a subreddit."""
     # Validate subreddit

@@ -94,12 +94,32 @@ class CLIAuth:
         except Exception:
             return None
 
+    def get_stored_tokens(self) -> Optional[dict]:
+        """Get stored authentication tokens."""
+        if not self.token_file.exists():
+            return None
+
+        try:
+            with open(self.token_file, "r") as f:
+                return json.load(f)
+        except Exception:
+            return None
+
     def require_auth(self, required_role: UserRole = None):
         """Decorator to require authentication for CLI commands."""
 
         def decorator(func):
             @wraps(func)
-            def wrapper(**kwargs):
+            def wrapper(*args, **kwargs):
+                # Check if we have tokens first
+                tokens = self.get_stored_tokens()
+                if not tokens:
+                    console.print(
+                        "❌ Authentication required. Run 'reddit-analyzer auth login'",
+                        style="red",
+                    )
+                    raise typer.Exit(1)
+
                 user = self.get_current_user()
                 if not user:
                     console.print(
@@ -116,7 +136,7 @@ class CLIAuth:
                     )
                     raise typer.Exit(1)
 
-                return func(**kwargs)
+                return func(*args, **kwargs)
 
             return wrapper
 
@@ -150,3 +170,6 @@ cli_auth = CLIAuth()
 
 # Export require_auth at module level for easier imports
 require_auth = cli_auth.require_auth
+
+# Export get_stored_tokens at module level for easier imports
+get_stored_tokens = cli_auth.get_stored_tokens

@@ -424,11 +424,16 @@ def calculate_political_diversity(analyses: List[Dict[str, Any]]) -> float:
 
     # Normalize by theoretical maximum dispersion
     max_distance = np.sqrt(3)  # Maximum distance in 3D unit cube
-    normalized_dispersion = np.mean(distances) / max_distance
+    normalized_distances = distances / max_distance
 
     # Weight by confidence levels
-    weights = [a.get("analysis_quality", 0.5) for a in analyses]
-    weighted_diversity = np.average(normalized_dispersion, weights=weights)
+    weights = np.array([a.get("analysis_quality", 0.5) for a in analyses])
+
+    # Calculate weighted average of normalized distances
+    if len(weights) > 0 and len(normalized_distances) > 0:
+        weighted_diversity = np.average(normalized_distances, weights=weights)
+    else:
+        weighted_diversity = 0.0
 
     return min(weighted_diversity * 1.5, 1.0)  # Scale to 0-1 range
 

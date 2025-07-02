@@ -1,5 +1,7 @@
 """Pytest configuration and fixtures."""
 
+import os
+import glob
 import pytest
 from sqlalchemy import create_engine
 from sqlalchemy.orm import sessionmaker
@@ -64,3 +66,20 @@ def override_get_db(test_db):
 def db_session(test_db):
     """Database session fixture (alias for test_db)."""
     return test_db
+
+
+def pytest_sessionfinish(session, exitstatus):
+    """Clean up coverage files after test session completes."""
+    # Get the root directory of the project
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+    # Find all .coverage.* files (but not .coverage itself)
+    coverage_files = glob.glob(os.path.join(root_dir, ".coverage.*"))
+
+    # Remove each coverage file
+    for coverage_file in coverage_files:
+        try:
+            os.remove(coverage_file)
+        except OSError:
+            # Ignore errors if file doesn't exist or can't be removed
+            pass

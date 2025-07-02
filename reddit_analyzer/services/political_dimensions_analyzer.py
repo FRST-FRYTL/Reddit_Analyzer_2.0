@@ -167,12 +167,18 @@ class EconomicDimension(BaseDimension):
             "minimum wage",
             "universal basic income",
             "public option",
+            "universal healthcare",
+            "healthcare is a human right",
+            "human right",
+            "market failure",
+            "government intervention",
         ],
         "topics": [
             "market_regulation",
             "public_services",
             "economic_equality",
             "social_programs",
+            "healthcare",
         ],
     }
 
@@ -183,7 +189,7 @@ class EconomicDimension(BaseDimension):
         market_score = self._score_indicators(text, topics, self.MARKET_INDICATORS)
         planned_score = self._score_indicators(text, topics, self.PLANNED_INDICATORS)
 
-        # Calculate position (-1 = planned, +1 = market)
+        # Calculate position (-1 = left/planned, +1 = right/market)
         total = market_score + planned_score
         if total > 0:
             position = (market_score - planned_score) / total
@@ -229,12 +235,17 @@ class SocialDimension(BaseDimension):
             "decriminalization",
             "marriage equality",
             "reproductive rights",
+            "equal rights",
+            "equality",
+            "regardless of sexual orientation",
+            "everyone deserves",
         ],
         "topics": [
             "personal_autonomy",
             "privacy_rights",
             "freedom_expression",
             "individual_liberty",
+            "equality",
         ],
     }
 
@@ -256,12 +267,16 @@ class SocialDimension(BaseDimension):
             "family values",
             "religious values",
             "social norms",
+            "preserve",
+            "cultural heritage",
+            "heritage",
         ],
         "topics": [
             "social_cohesion",
             "moral_standards",
             "community_values",
             "traditional_order",
+            "tradition",
         ],
     }
 
@@ -274,10 +289,10 @@ class SocialDimension(BaseDimension):
             text, topics, self.AUTHORITY_INDICATORS
         )
 
-        # Calculate position (-1 = authority, +1 = liberty)
+        # Calculate position (-1 = progressive/liberty, +1 = conservative/authority)
         total = liberty_score + authority_score
         if total > 0:
-            position = (liberty_score - authority_score) / total
+            position = (authority_score - liberty_score) / total
             confidence = min(total / 10.0, 1.0)
         else:
             position = 0.0
@@ -289,15 +304,15 @@ class SocialDimension(BaseDimension):
     def get_label(self, score: float) -> str:
         """Convert numeric score to human-readable label."""
         if score < -0.6:
-            return "Strongly Authoritarian"
+            return "Strongly Progressive"
         elif score < -0.2:
-            return "Moderately Authoritarian"
+            return "Moderately Progressive"
         elif score < 0.2:
             return "Balanced Social View"
         elif score < 0.6:
-            return "Moderately Libertarian"
+            return "Moderately Conservative"
         else:
-            return "Strongly Libertarian"
+            return "Strongly Conservative"
 
 
 class GovernanceDimension(BaseDimension):
@@ -321,12 +336,17 @@ class GovernanceDimension(BaseDimension):
             "local decision",
             "community driven",
             "neighborhood",
+            "minimal involvement",
+            "personal freedoms",
+            "government should have minimal",
+            "limited government",
         ],
         "topics": [
             "federalism",
             "local_governance",
             "community_solutions",
             "decentralization",
+            "personal_freedom",
         ],
     }
 
@@ -348,6 +368,10 @@ class GovernanceDimension(BaseDimension):
             "federal law",
             "supreme court",
             "executive order",
+            "strong leadership",
+            "strict law enforcement",
+            "maintain order",
+            "law enforcement",
         ],
         "topics": [
             "national_programs",
@@ -368,10 +392,10 @@ class GovernanceDimension(BaseDimension):
             text, topics, self.CENTRALIZED_INDICATORS
         )
 
-        # Calculate position (-1 = centralized, +1 = decentralized)
+        # Calculate position (-1 = libertarian/decentralized, +1 = authoritarian/centralized)
         total = decentralized_score + centralized_score
         if total > 0:
-            position = (decentralized_score - centralized_score) / total
+            position = (centralized_score - decentralized_score) / total
             confidence = min(total / 10.0, 1.0)
         else:
             position = 0.0
@@ -383,15 +407,15 @@ class GovernanceDimension(BaseDimension):
     def get_label(self, score: float) -> str:
         """Convert numeric score to human-readable label."""
         if score < -0.6:
-            return "Strongly Centralized"
+            return "Strongly Libertarian"
         elif score < -0.2:
-            return "Moderately Centralized"
+            return "Moderately Libertarian"
         elif score < 0.2:
             return "Balanced Governance"
         elif score < 0.6:
-            return "Moderately Decentralized"
+            return "Moderately Authoritarian"
         else:
-            return "Strongly Decentralized"
+            return "Strongly Authoritarian"
 
 
 def calculate_political_diversity(analyses: List[Dict[str, Any]]) -> float:

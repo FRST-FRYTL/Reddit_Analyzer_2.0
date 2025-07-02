@@ -2,7 +2,9 @@
 
 A comprehensive data analysis application for collecting, processing, and analyzing Reddit data using the Reddit API.
 
-> 🚀 **Phase 4D Update**: New political analysis features for topic detection, multi-dimensional political analysis, and discussion quality metrics. See [Political Analysis](#political-analysis) section below.
+> 🚀 **Phase 5 Update**: Advanced NLP capabilities with heavy model support for emotion detection, stance analysis, entity extraction, and argument mining. See [Advanced NLP Features](#advanced-nlp-features) section below.
+>
+> 📊 **Phase 4D Features**: Political analysis with topic detection, multi-dimensional analysis, and discussion quality metrics. See [Political Analysis](#political-analysis) section.
 
 ## Features
 
@@ -10,6 +12,7 @@ A comprehensive data analysis application for collecting, processing, and analyz
 - **Database Management**: PostgreSQL with SQLAlchemy ORM for reliable data storage
 - **Data Processing**: Structured analysis of posts, comments, users, and subreddits
 - **NLP Analysis**: Sentiment analysis, keyword extraction, topic modeling, and emotion detection
+- **Advanced NLP Features**: Heavy model support for entity extraction, stance detection, argument mining
 - **Caching Layer**: Redis integration for improved performance
 - **Command Line Interface**: Comprehensive CLI for data visualization and management
 - **Authentication System**: JWT-based authentication with role-based access control
@@ -36,7 +39,11 @@ A comprehensive data analysis application for collecting, processing, and analyz
 
 2. **Install dependencies with uv**:
    ```bash
+   # Basic installation
    uv sync --extra cli --extra dev
+
+   # With heavy NLP models support (optional)
+   uv sync --extra cli --extra dev --extra nlp-enhanced
    ```
 
 3. **Configure environment variables**:
@@ -271,11 +278,20 @@ reddit_analyzer/
 │   │   ├── reports.py       # Report generation commands
 │   │   ├── admin.py         # Admin commands
 │   │   ├── analyze.py       # Political analysis commands
+│   │   ├── analyze_heavy.py # Advanced NLP analysis commands
 │   │   └── utils/           # CLI utilities and ASCII charts
 │   ├── models/               # Database models
 │   ├── services/             # Business logic
 │   │   ├── topic_analyzer.py           # Political topic analysis
 │   │   └── political_dimensions_analyzer.py # Multi-dimensional analysis
+│   ├── processing/           # NLP processing modules
+│   │   ├── sentiment_analyzer.py       # Multi-model sentiment analysis
+│   │   ├── topic_modeler.py           # LDA topic modeling
+│   │   ├── entity_analyzer.py         # Entity extraction (Phase 5)
+│   │   ├── emotion_analyzer.py        # Emotion detection (Phase 5)
+│   │   ├── stance_detector.py         # Stance detection (Phase 5)
+│   │   ├── argument_miner.py          # Argument mining (Phase 5)
+│   │   └── advanced_topic_modeler.py  # Advanced topic modeling (Phase 5)
 │   ├── data/                 # Static data and taxonomies
 │   │   └── political_topics.py # Political topic definitions
 │   ├── utils/                # Utility functions
@@ -319,6 +335,9 @@ reddit_analyzer/
   - spaCy for NER and keyword extraction (optional)
   - Transformers for deep learning models (optional)
   - scikit-learn for topic modeling
+  - BERTopic for advanced topic modeling (Phase 5)
+  - Sentence-transformers for embeddings (Phase 5)
+  - GPU acceleration with PyTorch CUDA (Phase 5)
 - **Package Management**: uv
 - **Testing**: pytest with coverage
 - **Code Quality**: Black, Ruff, pre-commit hooks
@@ -349,6 +368,14 @@ REFRESH_TOKEN_EXPIRE_DAYS=7
 # Political Analysis (Optional)
 MIN_USERS_FOR_ANALYSIS=25
 MIN_TIME_WINDOW_DAYS=7
+
+# Advanced NLP Features (Optional - Phase 5)
+NLP_ENABLE_HEAVY_MODELS=false
+NLP_ENABLE_GPU=false
+GPU_BATCH_SIZE=32
+EMOTION_MODEL=j-hartmann/emotion-english-distilroberta-base
+STANCE_MODEL=facebook/bart-large-mnli
+ENTITY_MODEL=en_core_web_lg
 ```
 
 ## CLI Commands Reference
@@ -400,6 +427,28 @@ uv run reddit-analyzer analyze overlap SUBREDDIT1 SUBREDDIT2          # Communit
 uv run reddit-analyzer analyze dimensions SUBREDDIT [--save]          # Multi-dimensional political analysis
 uv run reddit-analyzer analyze political-compass SUBREDDIT            # Generate political compass
 uv run reddit-analyzer analyze political-diversity SUBREDDIT          # Analyze political diversity
+```
+
+### Advanced NLP Commands (Phase 5)
+```bash
+# Emotion analysis
+uv run reddit-analyzer analyze-heavy emotions SUBREDDIT [--limit N]   # Analyze emotions in posts
+uv run reddit-analyzer analyze-heavy emotions SUBREDDIT --detailed    # Detailed emotion breakdown
+
+# Stance detection
+uv run reddit-analyzer analyze-heavy stance "TEXT" "TARGET"           # Detect stance towards target
+uv run reddit-analyzer analyze-heavy political "TEXT" --issue ISSUE   # Political stance analysis
+
+# Entity extraction
+uv run reddit-analyzer analyze-heavy entities SUBREDDIT [--top-n N]   # Extract and analyze entities
+
+# Argument analysis
+uv run reddit-analyzer analyze-heavy arguments "TEXT" [--evaluate]    # Analyze argumentative structure
+
+# Advanced topic modeling
+uv run reddit-analyzer analyze-heavy topics-advanced SUBREDDIT        # Advanced topic modeling
+  --method [bertopic|nmf|lda]                                        # Choose modeling method
+  --num-topics N                                                     # Number of topics
 ```
 
 ### Admin Commands (Admin role required)
@@ -590,6 +639,102 @@ Discussion Quality: 0.72/1.0 (Good)
 
 Confidence Level: 82% (1,234 posts analyzed)
 ```
+
+## Advanced NLP Features
+
+The Reddit Analyzer includes cutting-edge NLP capabilities through Phase 5 heavy models. These features require additional dependencies but provide state-of-the-art text analysis.
+
+### Heavy Model Features
+
+#### Emotion Detection
+- Goes beyond basic sentiment to detect specific emotions
+- Identifies: joy, anger, fear, sadness, surprise, disgust
+- Uses transformer-based models for high accuracy
+- GPU acceleration support for batch processing
+
+#### Stance Detection
+- Determines position towards specific topics or entities
+- Classifications: support, oppose, neutral
+- Confidence scoring for each prediction
+- Useful for understanding polarization
+
+#### Entity Extraction
+- Advanced named entity recognition
+- Political entity classification (politicians, organizations, policies)
+- Entity-specific sentiment analysis
+- Relationship extraction between entities
+
+#### Argument Mining
+- Identifies claims and supporting evidence
+- Evaluates argument quality and structure
+- Detects logical fallacies
+- Maps debate structures in discussions
+
+#### Advanced Topic Modeling
+- BERTopic for semantic topic modeling
+- Hierarchical topic structures
+- Dynamic topic evolution over time
+- Multiple algorithms: BERTopic, NMF, LDA
+
+### Installation for Heavy Models
+
+```bash
+# Install enhanced NLP dependencies
+uv sync --extra cli --extra nlp-enhanced
+
+# Install large spaCy model (required for entity extraction)
+python -m spacy download en_core_web_lg
+
+# Optional: Install BERTopic for advanced topic modeling
+uv add bertopic
+
+# Optional: Enable GPU support (requires CUDA)
+uv add torch --extra-index-url https://download.pytorch.org/whl/cu118
+```
+
+### Configuration
+
+Enable heavy models in your environment:
+```bash
+# .env file
+NLP_ENABLE_HEAVY_MODELS=true
+NLP_ENABLE_GPU=true  # If GPU available
+GPU_BATCH_SIZE=32    # Adjust based on GPU memory
+```
+
+### Example Usage
+
+```bash
+# Analyze emotions in political discussions
+uv run reddit-analyzer analyze-heavy emotions politics --limit 100
+
+# Detect stance on healthcare
+uv run reddit-analyzer analyze-heavy stance "We need universal healthcare" "healthcare"
+
+# Extract political entities
+uv run reddit-analyzer analyze-heavy entities worldnews --top-n 50
+
+# Analyze argument quality
+uv run reddit-analyzer analyze-heavy arguments "This policy fails because..."
+
+# Advanced topic modeling with BERTopic
+uv run reddit-analyzer analyze-heavy topics-advanced politics --method bertopic
+```
+
+### Performance Considerations
+
+- **Memory Usage**: Heavy models require 2-4GB RAM
+- **GPU Acceleration**: 2-10x speedup with CUDA-enabled GPU
+- **Batch Processing**: Optimal batch size depends on GPU memory
+- **Graceful Degradation**: System falls back to basic models if heavy models unavailable
+
+### Privacy and Ethics
+
+All advanced NLP features follow the same ethical guidelines as political analysis:
+- No individual user profiling
+- Aggregate analysis only
+- Transparent confidence scoring
+- Opt-out support for subreddits
 
 ## Development Documentation
 

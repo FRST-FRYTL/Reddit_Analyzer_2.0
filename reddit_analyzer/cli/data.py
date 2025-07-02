@@ -137,9 +137,35 @@ def collect_data(
     limit: int = typer.Option(100, help="Number of posts to collect"),
     sort: str = typer.Option("hot", help="Sort method: hot, new, top"),
     skip_nlp: bool = typer.Option(False, "--skip-nlp", help="Skip NLP analysis"),
+    with_comments: bool = typer.Option(
+        False, "--with-comments", help="Include comments for each post"
+    ),
+    comment_limit: int = typer.Option(
+        50, "--comment-limit", help="Max comments per post"
+    ),
+    comment_depth: int = typer.Option(
+        3, "--comment-depth", help="Max comment tree depth"
+    ),
+    comments_only: bool = typer.Option(
+        False, "--comments-only", help="Collect only comments from existing posts"
+    ),
+    min_comment_score: int = typer.Option(
+        None, "--min-comment-score", help="Minimum comment score to include"
+    ),
 ):
     """Collect data from specified subreddit."""
-    console.print(f"🚀 Starting data collection from r/{subreddit}")
+    if comments_only and with_comments:
+        console.print(
+            "❌ Cannot use --with-comments and --comments-only together", style="red"
+        )
+        raise typer.Exit(1)
+
+    mode = (
+        "comments only"
+        if comments_only
+        else ("posts with comments" if with_comments else "posts")
+    )
+    console.print(f"🚀 Starting data collection from r/{subreddit} ({mode})")
 
     try:
         from reddit_analyzer.services.reddit_client import RedditClient
@@ -172,8 +198,10 @@ def collect_data(
             db.add(db_subreddit)
             db.commit()
 
-        # Fetch posts from Reddit
-        posts = reddit_client.get_subreddit_posts(subreddit, sort=sort, limit=limit)
+        posts = []
+        if not comments_only:
+            # Fetch posts from Reddit
+            posts = reddit_client.get_subreddit_posts(subreddit, sort=sort, limit=limit)
 
         with Progress() as progress:
             task = progress.add_task(
@@ -254,7 +282,144 @@ def collect_data(
                 style="yellow",
             )
 
-        # Run NLP analysis on collected posts
+        # Collect comments if requested
+        comment_count = 0
+        comments_to_analyze = []
+
+        if with_comments or comments_only:
+            console.print("\n💬 Collecting comments...")
+
+            # Get posts to collect comments for
+            if comments_only:
+                # Fetch existing posts from database
+                target_posts = (
+                    db.query(Post)
+                    .filter(Post.subreddit_id == db_subreddit.id)
+                    .order_by(Post.created_utc.desc())
+                    .limit(limit)
+                    .all()
+                )
+            else:
+                # For --with-comments, collect comments for all posts from this run
+                # Get post IDs from the posts we just fetched
+                post_ids = [p["id"] for p in posts]
+                target_posts = (
+                    (db.query(Post).filter(Post.id.in_(post_ids)).all())
+                    if post_ids
+                    else []
+                )
+
+            if target_posts:
+                with Progress() as comment_progress:
+                    comment_task = comment_progress.add_task(
+                        "[cyan]Collecting comments...", total=len(target_posts)
+                    )
+
+                    for post in target_posts:
+                        try:
+                            # Get post ID (handle both dict and ORM object)
+                            post_id = post.id if hasattr(post, "id") else post["id"]
+
+                            # Fetch comments for this post
+                            comments = reddit_client.get_post_comments(
+                                post_id,
+                                limit=comment_limit,
+                                depth=comment_depth,
+                                min_score=min_comment_score,
+                            )
+
+                            for comment_data in comments:
+                                # Check if comment exists
+                                existing_comment = (
+                                    db.query(Comment)
+                                    .filter(Comment.id == comment_data["id"])
+                                    .first()
+                                )
+
+                                if not existing_comment:
+                                    # Get or create comment author
+                                    author_name = comment_data["author"]
+                                    comment_author = None
+
+                                    if author_name != "[deleted]":
+                                        comment_author = (
+                                            db.query(User)
+                                            .filter(User.username == author_name)
+                                            .first()
+                                        )
+
+                                        if not comment_author:
+                                            try:
+                                                user_info = reddit_client.get_user_info(
+                                                    author_name
+                                                )
+                                                comment_author = User(
+                                                    username=user_info["username"],
+                                                    created_utc=user_info[
+                                                        "created_utc"
+                                                    ],
+                                                    comment_karma=user_info[
+                                                        "comment_karma"
+                                                    ],
+                                                    link_karma=user_info["link_karma"],
+                                                    is_verified=user_info[
+                                                        "is_verified"
+                                                    ],
+                                                    role=UserRole.USER,
+                                                    is_active=True,
+                                                )
+                                                db.add(comment_author)
+                                                db.commit()
+                                            except Exception:
+                                                pass
+
+                                    # Create comment
+                                    new_comment = Comment(
+                                        id=comment_data["id"],
+                                        post_id=comment_data["post_id"],
+                                        parent_id=(
+                                            comment_data["parent_id"]
+                                            if comment_data["parent_id"]
+                                            != f"t3_{comment_data['post_id']}"
+                                            else None
+                                        ),
+                                        author_id=(
+                                            comment_author.id
+                                            if comment_author
+                                            else None
+                                        ),
+                                        body=comment_data["body"],
+                                        score=comment_data["score"],
+                                        created_utc=comment_data["created_utc"],
+                                        is_deleted=comment_data.get(
+                                            "is_deleted", False
+                                        ),
+                                    )
+                                    db.add(new_comment)
+                                    comment_count += 1
+
+                                    if not skip_nlp:
+                                        comments_to_analyze.append(new_comment)
+
+                            db.commit()
+
+                        except Exception as e:
+                            console.print(
+                                f"⚠️  Failed to collect comments for post {post_id}: {e}",
+                                style="yellow",
+                            )
+
+                        comment_progress.update(comment_task, advance=1)
+
+                console.print(
+                    f"✅ Collected {comment_count} new comments", style="green"
+                )
+            else:
+                console.print(
+                    "ℹ️  No posts found to collect comments for", style="yellow"
+                )
+
+        # Run NLP analysis on collected posts and comments
         if not skip_nlp and posts_to_analyze:
             console.print(
                 f"\n🧠 Processing NLP analysis for {len(posts_to_analyze)} posts..."
@@ -289,6 +454,38 @@ def collect_data(
                 f"✅ Completed NLP analysis for {analyzed_count} posts",
                 style="green",
             )
+
+        # Run NLP analysis on comments
+        if not skip_nlp and comments_to_analyze:
+            console.print(
+                f"\n🧠 Processing NLP analysis for {len(comments_to_analyze)} comments..."
+            )
+
+            with Progress() as comment_nlp_progress:
+                comment_nlp_task = comment_nlp_progress.add_task(
+                    "[cyan]Analyzing comment sentiment...",
+                    total=len(comments_to_analyze),
+                )
+
+                analyzed_comments = 0
+                for comment in comments_to_analyze:
+                    try:
+                        # Analyze comment text
+                        nlp_service.analyze_text(comment.body, comment_id=comment.id)
+                        analyzed_comments += 1
+                    except Exception as e:
+                        console.print(
+                            f"⚠️  Failed to analyze comment {comment.id}: {e}",
+                            style="yellow",
+                        )
+
+                    comment_nlp_progress.update(comment_nlp_task, advance=1)
+
+            console.print(
+                f"✅ Completed NLP analysis for {analyzed_comments} comments",
+                style="green",
+            )
+
         elif skip_nlp:
             console.print("ℹ️  NLP analysis skipped", style="yellow")
 

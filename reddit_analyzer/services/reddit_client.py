@@ -107,38 +107,130 @@ class RedditClient(LoggerMixin):
             raise
 
     def get_post_comments(
-        self, post_id: str, limit: Optional[int] = None
+        self,
+        post_id: str,
+        limit: int = 50,
+        depth: int = 3,
+        min_score: Optional[int] = None,
     ) -> List[Dict[str, Any]]:
-        """Get comments for a specific post."""
+        """Get comments for a specific post with enhanced options.
+
+        Args:
+            post_id: Reddit post ID
+            limit: Maximum number of comments to fetch
+            depth: Maximum comment tree depth
+            min_score: Minimum comment score to include
+
+        Returns:
+            List of comment dictionaries with depth information
+        """
         try:
             submission = self.reddit.submission(id=post_id)
-            submission.comments.replace_more(limit=0)  # Remove MoreComments objects
+
+            # Configure comment extraction
+            submission.comment_limit = limit
+            submission.comments.replace_more(limit=depth * 10)  # Expand based on depth
 
             comment_data = []
-            for comment in submission.comments.list():
-                if hasattr(comment, "body"):  # Check if it's a real comment
-                    comment_dict = {
-                        "id": comment.id,
-                        "post_id": post_id,
-                        "parent_id": comment.parent_id,
-                        "author": (
-                            comment.author.name if comment.author else "[deleted]"
-                        ),
-                        "body": comment.body,
-                        "score": comment.score,
-                        "created_utc": datetime.fromtimestamp(comment.created_utc),
-                        "is_deleted": comment.body == "[deleted]",
-                    }
-                    comment_data.append(comment_dict)
 
-                    if limit and len(comment_data) >= limit:
-                        break
+            def process_comment(comment, current_depth=0):
+                """Recursively process comments and their replies."""
+                if current_depth > depth:
+                    return
 
-            self.logger.info(f"Fetched {len(comment_data)} comments for post {post_id}")
+                if not hasattr(comment, "body"):
+                    return
+
+                # Apply min_score filter
+                if min_score is not None and comment.score < min_score:
+                    return
+
+                comment_dict = {
+                    "id": comment.id,
+                    "post_id": post_id,
+                    "parent_id": comment.parent_id,
+                    "author": (comment.author.name if comment.author else "[deleted]"),
+                    "body": comment.body,
+                    "score": comment.score,
+                    "created_utc": datetime.fromtimestamp(comment.created_utc),
+                    "edited": bool(comment.edited),
+                    "is_deleted": comment.body == "[deleted]",
+                    "depth": current_depth,
+                }
+                comment_data.append(comment_dict)
+
+                # Process replies
+                if hasattr(comment, "replies"):
+                    for reply in comment.replies:
+                        if len(comment_data) >= limit:
+                            break
+                        process_comment(reply, current_depth + 1)
+
+            # Process all top-level comments
+            for comment in submission.comments:
+                if len(comment_data) >= limit:
+                    break
+                process_comment(comment)
+
+            self.logger.info(
+                f"Fetched {len(comment_data)} comments for post {post_id} "
+                f"(max depth: {max(c['depth'] for c in comment_data) if comment_data else 0})"
+            )
             return comment_data
 
         except Exception as e:
             self.logger.error(f"Error fetching comments for post {post_id}: {e}")
+            raise
+
+    def get_all_comments(
+        self, subreddit_name: str, limit: int = 1000, time_filter: str = "all"
+    ) -> List[Dict[str, Any]]:
+        """Fetch comments directly from subreddit stream.
+
+        Args:
+            subreddit_name: Name of the subreddit
+            limit: Maximum number of comments to fetch
+            time_filter: Time filter for comments
+
+        Returns:
+            List of comment dictionaries
+        """
+        try:
+            subreddit = self.reddit.subreddit(subreddit_name)
+
+            comment_data = []
+            comment_count = 0
+
+            # Use comment stream for recent comments
+            for comment in subreddit.comments(limit=limit):
+                if not hasattr(comment, "body"):
+                    continue
+
+                comment_dict = {
+                    "id": comment.id,
+                    "post_id": comment.submission.id,
+                    "parent_id": comment.parent_id,
+                    "author": (comment.author.name if comment.author else "[deleted]"),
+                    "body": comment.body,
+                    "score": comment.score,
+                    "created_utc": datetime.fromtimestamp(comment.created_utc),
+                    "edited": bool(comment.edited),
+                    "is_deleted": comment.body == "[deleted]",
+                    "depth": 0,  # Will be calculated later if needed
+                }
+                comment_data.append(comment_dict)
+                comment_count += 1
+
+                if comment_count >= limit:
+                    break
+
+            self.logger.info(
+                f"Fetched {len(comment_data)} comments from r/{subreddit_name}"
+            )
+            return comment_data
+
+        except Exception as e:
+            self.logger.error(f"Error fetching comments from r/{subreddit_name}: {e}")
             raise
 
     def get_user_info(self, username: str) -> Dict[str, Any]:

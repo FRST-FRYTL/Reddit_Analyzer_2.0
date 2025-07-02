@@ -78,19 +78,24 @@ class NLPService:
             NLPService._text_processor = TextProcessor()
         return NLPService._text_processor
 
-    def analyze_text(self, text: str, post_id: Optional[str] = None) -> Dict[str, Any]:
+    def analyze_text(
+        self, text: str, post_id: Optional[str] = None, comment_id: Optional[str] = None
+    ) -> Dict[str, Any]:
         """
         Analyze a single text with all NLP processors.
 
         Args:
             text: Text to analyze
             post_id: Optional post ID for database storage
+            comment_id: Optional comment ID for database storage
 
         Returns:
             Dictionary containing all analysis results
         """
         if not text or not text.strip():
-            logger.warning(f"Empty text provided for analysis (post_id: {post_id})")
+            logger.warning(
+                f"Empty text provided for analysis (post_id: {post_id}, comment_id: {comment_id})"
+            )
             return self._empty_analysis()
 
         start_time = time.time()
@@ -151,9 +156,9 @@ class NLPService:
                 "model_versions": self._get_model_versions(),
             }
 
-            # Store in database if post_id provided
-            if post_id:
-                self._store_analysis(post_id, result)
+            # Store in database if post_id or comment_id provided
+            if post_id or comment_id:
+                self._store_analysis(post_id, comment_id, result)
 
             return result
 
@@ -313,19 +318,33 @@ class NLPService:
 
         return keywords
 
-    def _store_analysis(self, post_id: str, result: Dict[str, Any]) -> None:
+    def _store_analysis(
+        self, post_id: Optional[str], comment_id: Optional[str], result: Dict[str, Any]
+    ) -> None:
         """Store analysis results in database."""
         db = SessionLocal()
         try:
             # Check if analysis already exists
-            existing = (
-                db.query(TextAnalysis).filter(TextAnalysis.post_id == post_id).first()
-            )
+            if post_id:
+                existing = (
+                    db.query(TextAnalysis)
+                    .filter(TextAnalysis.post_id == post_id)
+                    .first()
+                )
+            elif comment_id:
+                existing = (
+                    db.query(TextAnalysis)
+                    .filter(TextAnalysis.comment_id == comment_id)
+                    .first()
+                )
+            else:
+                existing = None
 
             sentiment = result.get("sentiment", {})
 
             analysis_data = {
                 "post_id": post_id,
+                "comment_id": comment_id,
                 "sentiment_score": sentiment.get("compound", 0.0),
                 "sentiment_label": sentiment.get("label", "neutral"),
                 "confidence_score": sentiment.get("confidence", 0.0),

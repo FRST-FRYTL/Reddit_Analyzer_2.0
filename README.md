@@ -11,6 +11,7 @@ A comprehensive data analysis application for collecting, processing, and analyz
 - **Reddit API Integration**: Seamless data collection using PRAW (Python Reddit API Wrapper)
 - **Database Management**: PostgreSQL with SQLAlchemy ORM for reliable data storage
 - **Data Processing**: Structured analysis of posts, comments, users, and subreddits
+- **Comment Collection**: Hierarchical comment retrieval with depth control, filtering, and batch processing
 - **NLP Analysis**: Sentiment analysis, keyword extraction, topic modeling, and emotion detection
 - **Advanced NLP Features**: Heavy model support for entity extraction, stance detection, argument mining
 - **Caching Layer**: Redis integration for improved performance
@@ -95,15 +96,31 @@ uv run reddit-analyzer status
 # Collect posts from a subreddit
 uv run reddit-analyzer data collect python --limit 100
 
-# Collect without NLP analysis (faster)
-uv run reddit-analyzer data collect javascript --skip-nlp
+# Collect posts with comments
+uv run reddit-analyzer data collect python --limit 50 --with-comments
 
-# Collect newest posts
-uv run reddit-analyzer data collect datascience --sort new --limit 50
+# Collect posts with filtered comments
+uv run reddit-analyzer data collect javascript --with-comments --comment-limit 20 --min-comment-score 5
+
+# Collect only comments for existing posts
+uv run reddit-analyzer data collect datascience --comments-only
+
+# Collect without NLP analysis (faster)
+uv run reddit-analyzer data collect programming --skip-nlp
+
+# Collect newest posts with deep comment threads
+uv run reddit-analyzer data collect machinelearning --sort new --limit 25 --with-comments --comment-depth 5
 
 # Check data collection status
 uv run reddit-analyzer data status
 ```
+
+**Comment Collection Options**:
+- `--with-comments`: Include comments when collecting posts
+- `--comment-limit N`: Maximum comments per post (default: 50)
+- `--comment-depth N`: Maximum comment tree depth (default: 3)
+- `--comments-only`: Only collect comments for existing posts
+- `--min-comment-score N`: Only collect comments with score >= N
 
 **Analyze data**:
 ```bash

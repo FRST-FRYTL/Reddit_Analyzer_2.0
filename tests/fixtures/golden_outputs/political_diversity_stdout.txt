@@ -1,0 +1,13 @@
+⠋ Analyzing political diversity...
+
+Political Diversity Analysis for r/politics
+Period: 2025-06-02 to 2025-07-02
+Content analyzed: 0 items
+
+╭──────────────────────────── Diversity Assessment ────────────────────────────╮
+│ Political Diversity Index: 0.000/1.0                                         │
+│ Interpretation: Low political diversity                                      │
+│                                                                              │
+│ This community shows low political diversity, suggesting an echo chamber     │
+│ effect.                                                                      │
+╰──────────────────────────────────────────────────────────────────────────────╯

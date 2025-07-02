@@ -139,6 +139,38 @@ reddit_analyzer/              # Main package (Phase 4B/4C structure)
 │   └── validators.py       # Data validation
 ├── config.py               # Environment configuration
 └── database.py             # Database session management
+
+tests/                       # Test suite
+├── fixtures/                # Test fixtures and data
+│   ├── real_data.py        # Real data fixtures
+│   ├── test_data.db        # SQLite test database
+│   ├── test_data_manifest.json  # Test data metadata
+│   └── golden_outputs/     # Expected outputs for validation
+├── reports/                 # Test reports (organized by phase)
+│   ├── phase_1/            # Phase 1 test reports
+│   ├── phase_2/            # Phase 2 test reports
+│   ├── phase_3/            # Phase 3 test reports
+│   ├── phase_4/            # Phase 4 test reports
+│   ├── phase_4a/           # Phase 4A CLI test reports
+│   ├── phase_4b/           # Phase 4B authentication reports
+│   ├── phase_4c/           # Phase 4C NLP integration reports
+│   ├── phase_4d/           # Phase 4D political analysis reports
+│   └── misc/               # Coverage reports, security scans
+├── test_phase1_*.py        # Phase 1 tests
+├── test_phase2_*.py        # Phase 2 tests
+├── test_phase3_*.py        # Phase 3 tests
+├── test_phase4_*.py        # Phase 4 tests
+└── conftest.py             # Pytest configuration and fixtures
+
+scripts/                     # Utility scripts
+├── setup.sh                # Initial setup script
+├── collect_test_data.py    # Download real Reddit data for testing
+└── generate_golden_outputs.py  # Generate expected outputs
+
+specs/                       # Feature specifications
+├── political_bias_feature.md   # Political analysis specification
+├── phase5_heavy_models_plan.md # Heavy NLP models plan
+└── *.md                    # Other feature specs
 ```
 
 ### Key Technologies
@@ -281,6 +313,52 @@ with get_session() as session:
 - Use parameterized queries (SQLAlchemy handles this)
 - JWT tokens expire and require refresh
 - Passwords hashed with bcrypt
+
+## Test Reports and Documentation
+
+### Test Report Location
+All test reports should be saved in the appropriate phase subdirectory:
+```
+tests/reports/
+├── phase_1/     # Basic infrastructure tests
+├── phase_2/     # API and service tests
+├── phase_3/     # Data collection tests
+├── phase_4/     # CLI and integration tests
+├── phase_4a/    # CLI command tests
+├── phase_4b/    # Authentication tests
+├── phase_4c/    # NLP integration tests
+├── phase_4d/    # Political analysis tests
+└── misc/        # Coverage, security, performance reports
+```
+
+### Test Report Naming Convention
+```
+# Format: phase_<phase>_<type>_<version>_<description>.md
+# Examples:
+phase_4d_v10_real_data_testing_report.md
+phase_4b_cli_test_report_v2.md
+phase_4c_nlp_integration_final.md
+```
+
+For complete type definitions and detailed guidelines, see [`tests/reports/NAMING_CONVENTION.md`](tests/reports/NAMING_CONVENTION.md)
+
+### Report Contents
+Every test report should include:
+1. **Date**: Current date in YYYY-MM-DD format
+2. **Version**: Iteration number (v1, v2, etc.)
+3. **Summary**: Pass rate and key findings
+4. **Changes Made**: What was fixed or improved
+5. **Test Results**: Detailed results with pass/fail status
+6. **Next Steps**: Recommendations for further work
+
+### Golden Outputs
+Expected test outputs are stored in:
+```
+tests/fixtures/golden_outputs/
+├── *_stdout.txt      # Raw command output
+├── *_metrics.json    # Extracted metrics
+└── generation_metadata.json  # Generation info
+```
 
 ## Troubleshooting
 

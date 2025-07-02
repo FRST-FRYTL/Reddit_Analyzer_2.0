@@ -1,0 +1,15 @@
+⠋ Calculating political diversity...
+
+Political Dimensions Analysis for r/politics
+Period: 2025-06-02 to 2025-07-02
+Posts analyzed: 0
+
+           Average Political Positions
+┏━━━━━━━━━━━┳━━━━━━━━━━━━━━━┳━━━━━━━━━━┳━━━━━━━━━┓
+┃ Dimension ┃ Average Score ┃ Position ┃ Std Dev ┃
+┡━━━━━━━━━━━╇━━━━━━━━━━━━━━━╇━━━━━━━━━━╇━━━━━━━━━┩
+└───────────┴───────────────┴──────────┴─────────┘
+╭───────────────────────────── Diversity Metrics ──────────────────────────────╮
+│ Political Diversity Index: 0.00/1.0                                          │
+│ Interpretation: Low diversity                                                │
+╰──────────────────────────────────────────────────────────────────────────────╯

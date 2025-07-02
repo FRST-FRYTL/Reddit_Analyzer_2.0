@@ -167,7 +167,7 @@ def analyze_topics(
 
     # Generate report
     _display_topic_analysis_report(
-        subreddit,
+        sub.name,
         topic_scores,
         topic_sentiments,
         quality_metrics,
@@ -180,7 +180,7 @@ def analyze_topics(
     # Save report if requested
     if save_report:
         report_data = {
-            "subreddit": subreddit,
+            "subreddit": sub.name,
             "date_range": {
                 "start": start_date.isoformat(),
                 "end": end_date.isoformat(),
@@ -421,8 +421,8 @@ def analyze_overlap(
             )
 
             # Get unique authors
-            authors1 = set(p.author_name for p in posts1 if p.author_name)
-            authors2 = set(p.author_name for p in posts2 if p.author_name)
+            authors1 = set(p.author.username for p in posts1 if p.author)
+            authors2 = set(p.author.username for p in posts2 if p.author)
 
             # Calculate overlap
             shared_authors = authors1 & authors2

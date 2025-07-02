@@ -171,7 +171,8 @@ class CLIAuth:
 
 
 # Global auth instance
-cli_auth = CLIAuth()
+# Check environment variable for test mode
+cli_auth = CLIAuth(skip_auth=os.environ.get("SKIP_AUTH", "").lower() == "true")
 
 
 def enable_test_mode():

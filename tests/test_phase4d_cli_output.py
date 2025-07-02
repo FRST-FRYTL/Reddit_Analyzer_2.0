@@ -6,9 +6,10 @@ from typer.testing import CliRunner
 from unittest.mock import Mock, patch, MagicMock
 import tempfile
 import os
+from datetime import datetime, timedelta
 
 from reddit_analyzer.cli.main import app
-from reddit_analyzer.models import Subreddit
+from reddit_analyzer.models import Subreddit, Post, Comment
 
 runner = CliRunner()
 
@@ -40,20 +41,47 @@ def mock_auth():
 @pytest.fixture
 def mock_db_and_analyzer():
     """Mock database and analyzers."""
-    with patch("reddit_analyzer.database.get_session") as mock_session:
+    with patch("reddit_analyzer.database.get_session") as mock_get_session:
         # Setup database mock
         mock_ctx = MagicMock()
-        mock_session.return_value.__enter__ = Mock(return_value=mock_ctx)
-        mock_session.return_value.__exit__ = Mock(return_value=None)
+        mock_session = MagicMock()
+        mock_session.__enter__ = Mock(return_value=mock_ctx)
+        mock_session.__exit__ = Mock(return_value=None)
+        mock_get_session.return_value = mock_session
 
         # Mock subreddit
         test_subreddit = Mock(spec=Subreddit)
         test_subreddit.id = 1
         test_subreddit.name = "test_politics"
 
-        mock_ctx.query().filter_by().first.return_value = test_subreddit
-        mock_ctx.query().filter().order_by().limit().all.return_value = []
-        mock_ctx.query().filter().order_by().all.return_value = []
+        # Create test posts with political content
+        test_posts = []
+        for i in range(5):
+            post = Mock(spec=Post)
+            post.id = i
+            post.title = f"Healthcare reform discussion {i}"
+            post.selftext = f"Universal healthcare and economic policy debate {i}"
+            post.created_utc = datetime.utcnow() - timedelta(days=i)
+            post.subreddit_id = 1
+            test_posts.append(post)
+
+        # Setup query mocks
+        def query_side_effect(model):
+            query_mock = Mock()
+
+            if model == Subreddit:
+                query_mock.filter_by.return_value.first.return_value = test_subreddit
+            elif model == Post:
+                filter_mock = Mock()
+                filter_mock.order_by.return_value.limit.return_value.all.return_value = test_posts
+                filter_mock.order_by.return_value.all.return_value = test_posts
+                query_mock.filter.return_value = filter_mock
+            elif model == Comment:
+                query_mock.filter.return_value.all.return_value = []
+
+            return query_mock
+
+        mock_ctx.query.side_effect = query_side_effect
 
         yield mock_ctx, test_subreddit
 
@@ -185,31 +213,45 @@ class TestCLIOutputFormats:
 
     def test_political_compass_plot(self, mock_auth, mock_db_and_analyzer):
         """Test political compass visualization."""
-        with patch(
-            "reddit_analyzer.services.political_dimensions_analyzer.PoliticalDimensionsAnalyzer"
-        ) as mock_analyzer:
-            mock_instance = Mock()
-            mock_analyzer.return_value = mock_instance
+        mock_ctx, test_subreddit = mock_db_and_analyzer
 
-            # Mock the analysis result
-            mock_analysis_result = Mock()
-            mock_analysis_result.dimensions = {
-                "economic": {"position": 0.3, "confidence": 0.8},
-                "social": {"position": -0.4, "confidence": 0.7},
-            }
-            mock_instance.analyze_political_dimensions.return_value = (
-                mock_analysis_result
-            )
+        # Mock the SubredditPoliticalDimensions query
+        from reddit_analyzer.models import SubredditPoliticalDimensions
 
-            result = runner.invoke(
-                app, ["analyze", "political-compass", "test_politics"]
-            )
+        mock_analysis = Mock(spec=SubredditPoliticalDimensions)
+        mock_analysis.avg_economic_score = 0.3
+        mock_analysis.avg_social_score = -0.4
+        mock_analysis.avg_governance_score = 0.1
+        mock_analysis.political_diversity_index = 0.65
+        mock_analysis.avg_confidence_level = 0.75
+        mock_analysis.analysis_start_date = datetime.utcnow() - timedelta(days=7)
+        mock_analysis.analysis_end_date = datetime.utcnow()
 
-            assert result.exit_code == 0
-            assert (
-                "Political Compass" in result.stdout
-                or "compass" in result.stdout.lower()
-            )
+        # Update the query mock to return our analysis
+        def query_side_effect(model):
+            query_mock = Mock()
+
+            if model == Subreddit:
+                query_mock.filter_by.return_value.first.return_value = test_subreddit
+            elif model == SubredditPoliticalDimensions:
+                filter_mock = Mock()
+                order_mock = Mock()
+                order_mock.first.return_value = mock_analysis
+                filter_mock.order_by.return_value = order_mock
+                query_mock.filter.return_value = filter_mock
+            else:
+                query_mock.filter_by.return_value.first.return_value = None
+
+            return query_mock
+
+        mock_ctx.query.side_effect = query_side_effect
+
+        result = runner.invoke(app, ["analyze", "political-compass", "test_politics"])
+
+        assert result.exit_code == 0
+        assert (
+            "Political Compass" in result.stdout or "compass" in result.stdout.lower()
+        )
 
     def test_save_report_formats(self, mock_auth, mock_db_and_analyzer):
         """Test saving reports in different formats."""

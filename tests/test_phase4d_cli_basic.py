@@ -18,7 +18,7 @@ def mock_get_session():
 # Patch get_session at module level
 with patch("reddit_analyzer.database.get_session", mock_get_session):
     from reddit_analyzer.cli.main import app
-    from reddit_analyzer.models import Subreddit, Post
+    from reddit_analyzer.models import Subreddit, Post, Comment
 
 runner = CliRunner()
 
@@ -75,21 +75,18 @@ def mock_auth():
 @pytest.fixture
 def mock_db_session():
     """Mock database session with test data."""
-    with patch("reddit_analyzer.database.get_db") as mock_session:
+    with patch("reddit_analyzer.database.get_session") as mock_get_session:
         # Create mock session context manager
         mock_ctx = MagicMock()
-        mock_session.return_value.__enter__ = Mock(return_value=mock_ctx)
-        mock_session.return_value.__exit__ = Mock(return_value=None)
+        mock_session = MagicMock()
+        mock_session.__enter__ = Mock(return_value=mock_ctx)
+        mock_session.__exit__ = Mock(return_value=None)
+        mock_get_session.return_value = mock_session
 
         # Create test subreddit
         test_subreddit = Mock(spec=Subreddit)
         test_subreddit.id = 1
         test_subreddit.name = "test_politics"
-
-        # Mock query for subreddit
-        mock_query = Mock()
-        mock_query.filter_by.return_value.first.return_value = test_subreddit
-        mock_ctx.query.return_value = mock_query
 
         # Create test posts
         test_posts = []
@@ -100,13 +97,29 @@ def mock_db_session():
             post.selftext = f"This is about healthcare policy and economic reform {i}"
             post.created_utc = datetime.utcnow() - timedelta(days=i)
             post.score = 100 - i * 10
+            post.subreddit_id = 1
             test_posts.append(post)
 
-        # Mock posts query
-        posts_query = Mock()
-        posts_query.filter.return_value.order_by.return_value = posts_query
-        posts_query.limit = Mock(return_value=posts_query)
-        posts_query.all.return_value = test_posts
+        # Setup query mocks to handle different query patterns
+        def query_side_effect(model):
+            query_mock = Mock()
+
+            if model == Subreddit:
+                # For Subreddit queries
+                query_mock.filter_by.return_value.first.return_value = test_subreddit
+            elif model == Post:
+                # For Post queries
+                filter_mock = Mock()
+                filter_mock.order_by.return_value.limit.return_value.all.return_value = test_posts
+                filter_mock.order_by.return_value.all.return_value = test_posts
+                query_mock.filter.return_value = filter_mock
+            elif model == Comment:
+                # For Comment queries
+                query_mock.filter.return_value.all.return_value = []
+
+            return query_mock
+
+        mock_ctx.query.side_effect = query_side_effect
 
         yield mock_ctx, test_subreddit, test_posts
 
@@ -243,14 +256,35 @@ class TestAnalyzeCommands:
         ) as mock_analyzer:
             mock_instance = Mock()
             mock_analyzer.return_value = mock_instance
-            mock_instance.analyze_dimensions.return_value = {
-                "economic": {"left_right": 0.2, "confidence": 0.8},
-                "social": {"progressive_conservative": -0.3, "confidence": 0.7},
-                "foreign_policy": {
-                    "interventionist_isolationist": 0.1,
+            # Mock the analyze_political_dimensions method
+            from reddit_analyzer.services.political_dimensions_analyzer import (
+                PoliticalAnalysisResult,
+            )
+
+            mock_result = Mock(spec=PoliticalAnalysisResult)
+            mock_result.dimensions = {
+                "economic": {
+                    "score": 0.2,
+                    "confidence": 0.8,
+                    "evidence": [],
+                    "label": "Mixed Economy",
+                },
+                "social": {
+                    "score": -0.3,
+                    "confidence": 0.7,
+                    "evidence": [],
+                    "label": "Moderately Progressive",
+                },
+                "governance": {
+                    "score": 0.1,
                     "confidence": 0.6,
+                    "evidence": [],
+                    "label": "Balanced Governance",
                 },
             }
+            mock_result.dominant_topics = {"healthcare": 0.5, "economy": 0.3}
+            mock_result.analysis_quality = 0.7
+            mock_instance.analyze_political_dimensions.return_value = mock_result
 
             result = runner.invoke(app, ["analyze", "dimensions", "test_politics"])
 
@@ -259,23 +293,44 @@ class TestAnalyzeCommands:
 
     def test_analyze_political_compass_command(self, mock_auth, mock_db_session):
         """Test the analyze political-compass command."""
-        with patch(
-            "reddit_analyzer.services.political_dimensions_analyzer.PoliticalDimensionsAnalyzer"
-        ) as mock_analyzer:
-            mock_instance = Mock()
-            mock_analyzer.return_value = mock_instance
-            mock_instance.calculate_political_compass.return_value = {
-                "economic_position": 0.3,
-                "social_position": -0.4,
-                "quadrant": "Libertarian Left",
-            }
+        mock_ctx, test_subreddit, test_posts = mock_db_session
 
-            result = runner.invoke(
-                app, ["analyze", "political-compass", "test_politics"]
-            )
+        # Mock the SubredditPoliticalDimensions query
+        from reddit_analyzer.models import SubredditPoliticalDimensions
 
-            assert result.exit_code == 0
-            assert "Political Compass" in result.stdout
+        mock_analysis = Mock(spec=SubredditPoliticalDimensions)
+        mock_analysis.avg_economic_score = 0.3
+        mock_analysis.avg_social_score = -0.4
+        mock_analysis.avg_governance_score = 0.1
+        mock_analysis.political_diversity_index = 0.65
+        mock_analysis.avg_confidence_level = 0.75
+        mock_analysis.analysis_start_date = datetime.utcnow() - timedelta(days=7)
+        mock_analysis.analysis_end_date = datetime.utcnow()
+
+        # Update the query mock to return our analysis
+        def query_side_effect(model):
+            query_mock = Mock()
+
+            if model == Subreddit:
+                query_mock.filter_by.return_value.first.return_value = test_subreddit
+            elif model == SubredditPoliticalDimensions:
+                filter_mock = Mock()
+                order_mock = Mock()
+                order_mock.first.return_value = mock_analysis
+                filter_mock.order_by.return_value = order_mock
+                query_mock.filter.return_value = filter_mock
+            else:
+                # Default behavior for other models
+                query_mock.filter_by.return_value.first.return_value = None
+
+            return query_mock
+
+        mock_ctx.query.side_effect = query_side_effect
+
+        result = runner.invoke(app, ["analyze", "political-compass", "test_politics"])
+
+        assert result.exit_code == 0
+        assert "Political Compass" in result.stdout
 
     def test_analyze_political_diversity_command(self, mock_auth, mock_db_session):
         """Test the analyze political-diversity command."""
@@ -340,15 +395,25 @@ class TestErrorHandling:
 
     def test_authentication_required_error(self):
         """Test error when not authenticated."""
-        with patch(
-            "reddit_analyzer.cli.utils.auth_manager.get_stored_tokens"
-        ) as mock_tokens:
-            mock_tokens.return_value = None
+        # Temporarily disable test mode to test authentication
+        from reddit_analyzer.cli.utils import auth_manager
 
-            result = runner.invoke(app, ["analyze", "topics", "test_politics"])
+        original_skip_auth = auth_manager.cli_auth.skip_auth
+        auth_manager.cli_auth.skip_auth = False
 
-            assert result.exit_code == 1
-            assert (
-                "Not authenticated" in result.stdout
-                or "authentication" in result.stdout.lower()
-            )
+        try:
+            with patch(
+                "reddit_analyzer.cli.utils.auth_manager.get_stored_tokens"
+            ) as mock_tokens:
+                mock_tokens.return_value = None
+
+                result = runner.invoke(app, ["analyze", "topics", "test_politics"])
+
+                assert result.exit_code == 1
+                assert (
+                    "Not authenticated" in result.stdout
+                    or "authentication" in result.stdout.lower()
+                )
+        finally:
+            # Restore test mode
+            auth_manager.cli_auth.skip_auth = original_skip_auth

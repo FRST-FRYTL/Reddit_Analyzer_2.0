@@ -1,0 +1,15 @@
+
+ Usage: reddit-analyzer analyze topics [OPTIONS] SUBREDDIT
+
+ Analyze political topics in a subreddit.
+
+
+╭─ Arguments ──────────────────────────────────────────────────────────────────╮
+│ *    subreddit      TEXT  Subreddit to analyze [default: None] [required]    │
+╰──────────────────────────────────────────────────────────────────────────────╯
+╭─ Options ────────────────────────────────────────────────────────────────────╮
+│ --days   -d      INTEGER  Number of days to analyze [default: 30]            │
+│ --limit  -l      INTEGER  Limit number of posts to analyze [default: None]   │
+│ --save   -s      TEXT     Save report to file [default: None]                │
+│ --help   -h               Show this message and exit.                        │
+╰──────────────────────────────────────────────────────────────────────────────╯

@@ -282,12 +282,26 @@ reddit_analyzer/
 │   ├── config.py             # Configuration management
 │   └── database.py           # Database setup
 ├── tests/                     # Test suite
+│   ├── fixtures/             # Test data and fixtures
+│   │   ├── real_data.py     # Real Reddit data fixtures
+│   │   ├── test_data.db     # SQLite test database
+│   │   └── golden_outputs/  # Expected outputs for validation
+│   ├── reports/              # All test reports (see Testing section)
+│   │   ├── phase_1/ through phase_4d/  # Phase-specific reports
+│   │   └── misc/            # Coverage and security reports
+│   └── test_*.py            # Test files by phase
 ├── alembic/                   # Database migrations
 ├── database/                  # Database initialization
 ├── scripts/                   # Setup and utility scripts
+│   ├── setup.sh             # Initial setup script
+│   ├── collect_test_data.py # Real Reddit data collection
+│   └── generate_golden_outputs.py # Generate expected outputs
 ├── specs/                     # Documentation and specifications
+│   ├── political_bias_feature.md  # Political analysis spec
+│   └── phase5_heavy_models_plan.md # Advanced NLP plan
 ├── pyproject.toml             # Project configuration
 ├── .env.example               # Environment template
+├── CLAUDE.md                  # Development guidelines
 └── README.md                  # This file
 ```
 
@@ -417,6 +431,8 @@ The application uses a normalized relational database with the following core en
 
 ## Testing
 
+### Running Tests
+
 Run the complete test suite:
 ```bash
 uv run pytest
@@ -430,7 +446,50 @@ uv run pytest --cov=reddit_analyzer --cov-report=html
 Test specific functionality:
 ```bash
 uv run pytest tests/test_models.py
+uv run pytest tests/test_phase4d_cli_basic_real_data.py -v  # Real data tests
 ```
+
+### Test Organization
+
+The test suite is organized by development phase:
+- **Phase 1**: Foundation tests (models, database)
+- **Phase 2**: Authentication system tests
+- **Phase 3**: Analytics and data processing tests
+- **Phase 4**: CLI implementation tests
+- **Phase 4a-4d**: Specialized CLI features (auth, NLP, political analysis)
+
+### Test Reports
+
+All test reports are stored in `tests/reports/` following a consistent naming convention:
+```
+phase_<phase>_<type>_<version>_<description>.md
+```
+
+Example reports:
+- `phase_1_foundation_v2_complete_test.md`
+- `phase_4d_validation_v10_real_data_test.md`
+
+View the latest test results:
+```bash
+ls tests/reports/phase_4d/  # Latest political analysis tests
+cat tests/reports/README.md  # Overview of all test reports
+```
+
+### Real Data Testing
+
+The project uses real Reddit data for testing (Phase 4D v10+):
+```bash
+# Collect test data from Reddit
+python scripts/collect_test_data.py
+
+# Generate golden outputs for validation
+python scripts/generate_golden_outputs.py
+
+# Run tests with real data
+uv run pytest tests/test_phase4d_cli_basic_real_data.py
+```
+
+Test data is stored in `tests/fixtures/test_data.db` with expected outputs in `tests/fixtures/golden_outputs/`.
 
 ## Development Workflow
 
@@ -531,6 +590,42 @@ Discussion Quality: 0.72/1.0 (Good)
 
 Confidence Level: 82% (1,234 posts analyzed)
 ```
+
+## Development Documentation
+
+### Key Documentation Files
+
+- **[CLAUDE.md](CLAUDE.md)**: Comprehensive development guidelines including:
+  - Development commands and workflows
+  - Detailed project structure
+  - Testing strategies and conventions
+  - Troubleshooting guides
+  - Performance optimization tips
+
+- **[tests/reports/](tests/reports/)**: All test execution reports organized by phase
+  - View the [naming convention](tests/reports/NAMING_CONVENTION.md)
+  - Browse [all reports](tests/reports/README.md)
+
+- **[specs/](specs/)**: Feature specifications and plans
+  - [Political analysis features](specs/political_bias_feature.md)
+  - [Phase 5 heavy models plan](specs/phase5_heavy_models_plan.md)
+
+### Development Resources
+
+**Test Infrastructure**:
+- Real data fixtures: `tests/fixtures/`
+- Golden outputs: `tests/fixtures/golden_outputs/`
+- Test utilities: `scripts/collect_test_data.py`, `scripts/generate_golden_outputs.py`
+
+**Code Quality**:
+- Pre-commit hooks configured in `.pre-commit-config.yaml`
+- Ruff configuration in `pyproject.toml`
+- Type hints throughout the codebase
+
+**Database**:
+- Migrations in `alembic/versions/`
+- Models in `reddit_analyzer/models/`
+- Schema documentation in test reports
 
 ## License
 

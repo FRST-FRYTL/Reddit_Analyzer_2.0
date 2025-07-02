@@ -18,7 +18,8 @@ console = Console()
 class CLIAuth:
     """CLI Authentication manager."""
 
-    def __init__(self):
+    def __init__(self, skip_auth: bool = False):
+        self.skip_auth = skip_auth
         self.config_dir = Path.home() / ".reddit-analyzer"
         self.token_file = self.config_dir / "tokens.json"
         self.config_dir.mkdir(exist_ok=True)
@@ -111,6 +112,10 @@ class CLIAuth:
         def decorator(func):
             @wraps(func)
             def wrapper(*args, **kwargs):
+                # Check skip_auth at runtime, not decorator definition time
+                if self.skip_auth:
+                    return func(*args, **kwargs)
+
                 # Check if we have tokens first
                 tokens = self.get_stored_tokens()
                 if not tokens:
@@ -167,6 +172,19 @@ class CLIAuth:
 
 # Global auth instance
 cli_auth = CLIAuth()
+
+
+def enable_test_mode():
+    """Enable test mode for CLI authentication (skips auth checks)."""
+    global cli_auth
+    cli_auth = CLIAuth(skip_auth=True)
+
+
+def disable_test_mode():
+    """Disable test mode and restore normal authentication."""
+    global cli_auth
+    cli_auth = CLIAuth(skip_auth=False)
+
 
 # Export require_auth at module level for easier imports
 require_auth = cli_auth.require_auth

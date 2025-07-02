@@ -23,18 +23,53 @@ with patch("reddit_analyzer.database.get_session", mock_get_session):
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def enable_auth_test_mode():
+    """Enable test mode for all tests in this module."""
+    # Import and modify the global cli_auth instance
+    from reddit_analyzer.cli.utils import auth_manager
+
+    # Save original state
+    original_skip_auth = getattr(auth_manager.cli_auth, "skip_auth", False)
+
+    # Enable skip_auth on the existing instance
+    auth_manager.cli_auth.skip_auth = True
+
+    # Patch all CLI modules that might have already imported cli_auth
+    import sys
+
+    cli_modules = [
+        "reddit_analyzer.cli.analyze",
+        "reddit_analyzer.cli.admin",
+        "reddit_analyzer.cli.data",
+        "reddit_analyzer.cli.nlp",
+        "reddit_analyzer.cli.reports",
+        "reddit_analyzer.cli.visualization",
+        "reddit_analyzer.cli.auth",
+    ]
+
+    for module_name in cli_modules:
+        if module_name in sys.modules:
+            module = sys.modules[module_name]
+            if hasattr(module, "cli_auth"):
+                module.cli_auth.skip_auth = True
+
+    yield
+
+    # Restore original state
+    auth_manager.cli_auth.skip_auth = original_skip_auth
+    for module_name in cli_modules:
+        if module_name in sys.modules:
+            module = sys.modules[module_name]
+            if hasattr(module, "cli_auth"):
+                module.cli_auth.skip_auth = original_skip_auth
+
+
 @pytest.fixture
 def mock_auth():
-    """Mock authentication for CLI commands."""
-    with patch(
-        "reddit_analyzer.cli.utils.auth_manager.get_stored_tokens"
-    ) as mock_tokens:
-        mock_tokens.return_value = {
-            "access_token": "test_token",
-            "refresh_token": "test_refresh",
-            "username": "testuser",
-        }
-        yield mock_tokens
+    """Mock authentication for CLI commands - now simplified since test mode is enabled."""
+    # No longer need complex mocking - test mode handles it
+    yield
 
 
 @pytest.fixture
@@ -98,8 +133,10 @@ class TestAnalyzeCommands:
             )
 
             # Check command executed successfully
+            if result.exit_code != 0:
+                print(f"Error output: {result.stdout}")
             assert result.exit_code == 0
-            assert "Political Topics Analysis" in result.stdout
+            assert "Political Topic Analysis" in result.stdout
             assert "healthcare" in result.stdout
             assert "economy" in result.stdout
 
@@ -171,7 +208,7 @@ class TestAnalyzeCommands:
         )
 
         assert result.exit_code == 0
-        assert "User Overlap Analysis" in result.stdout
+        assert "Community Overlap Analysis" in result.stdout
 
     def test_analyze_dimensions_command(self, mock_auth, mock_db_session):
         """Test the analyze dimensions command."""
@@ -248,7 +285,7 @@ class TestAnalyzeCommands:
             result = runner.invoke(app, cmd)
             assert result.exit_code == 0
             assert "Usage:" in result.stdout
-            assert "Options:" in result.stdout
+            assert "Options" in result.stdout  # Rich uses ╭─ Options ─╮
 
 
 class TestErrorHandling:

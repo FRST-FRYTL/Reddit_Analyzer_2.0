@@ -12,18 +12,28 @@ from reddit_analyzer.cli.main import app
 runner = CliRunner()
 
 
+@pytest.fixture(autouse=True)
+def enable_auth_test_mode():
+    """Enable test mode for all tests in this module."""
+    # Import and modify the global cli_auth instance
+    from reddit_analyzer.cli.utils import auth_manager
+
+    # Save original state
+    original_skip_auth = getattr(auth_manager.cli_auth, "skip_auth", False)
+
+    # Enable skip_auth on the existing instance
+    auth_manager.cli_auth.skip_auth = True
+
+    yield
+
+    # Restore original state
+    auth_manager.cli_auth.skip_auth = original_skip_auth
+
+
 @pytest.fixture
 def mock_auth():
-    """Mock authentication for CLI commands."""
-    with patch(
-        "reddit_analyzer.cli.utils.auth_manager.get_stored_tokens"
-    ) as mock_tokens:
-        mock_tokens.return_value = {
-            "access_token": "test_token",
-            "refresh_token": "test_refresh",
-            "username": "testuser",
-        }
-        yield mock_tokens
+    """Mock authentication - no longer needed with test mode."""
+    yield
 
 
 @pytest.fixture

@@ -8,6 +8,8 @@ from sqlalchemy.pool import StaticPool
 # Import all models first to ensure they're registered with Base
 from reddit_analyzer.models import Base
 
+# Import fixtures from fixtures directory
+
 
 @pytest.fixture(scope="session")
 def test_engine():

@@ -1,7 +1,7 @@
 """Analysis commands for political topics and dimensions."""
 
 import typer
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Any
 from datetime import datetime, timedelta
 from rich.console import Console
 from rich.table import Table
@@ -769,6 +769,15 @@ def analyze_dimensions(
     save_analysis: bool = typer.Option(
         False, "--save", "-s", help="Save analysis to database"
     ),
+    quality_threshold: float = typer.Option(
+        0.3, "--quality", "-q", help="Minimum quality threshold for analysis (0.0-1.0)"
+    ),
+    min_text_length: int = typer.Option(
+        50, "--min-length", "-m", help="Minimum text length for analysis"
+    ),
+    verbose: bool = typer.Option(
+        False, "--verbose", "-v", help="Show detailed filtering information"
+    ),
 ):
     """Analyze political dimensions of a subreddit."""
     # Validate subreddit
@@ -807,32 +816,75 @@ def analyze_dimensions(
 
             posts = posts_query.all()
 
+            # Filtering statistics
+            stats = {
+                "total_posts": len(posts),
+                "posts_too_short": 0,
+                "posts_low_quality": 0,
+                "posts_analyzed": 0,
+                "filtered_examples": [],
+            }
+
             # Analyze each post
             analyses = []
             dimension_scores = {"economic": [], "social": [], "governance": []}
 
             for post in posts:
                 text = f"{post.title} {post.selftext or ''}"
-                if len(text) > 50:  # Minimum text length
-                    result = analyzer.analyze_political_dimensions(text)
 
-                    if result.analysis_quality > 0.3:  # Minimum quality threshold
-                        analyses.append(
+                # Check text length
+                if len(text) <= min_text_length:
+                    stats["posts_too_short"] += 1
+                    if verbose and len(stats["filtered_examples"]) < 3:
+                        stats["filtered_examples"].append(
                             {
-                                "economic": result.dimensions.get("economic", {}),
-                                "social": result.dimensions.get("social", {}),
-                                "governance": result.dimensions.get("governance", {}),
-                                "analysis_quality": result.analysis_quality,
-                                "topics": result.dominant_topics,
+                                "title": (
+                                    post.title[:50] + "..."
+                                    if len(post.title) > 50
+                                    else post.title
+                                ),
+                                "reason": f"Text too short ({len(text)} chars < {min_text_length})",
+                                "text_length": len(text),
                             }
                         )
+                    continue
 
-                        # Collect scores for aggregation
-                        for dim in ["economic", "social", "governance"]:
-                            if dim in result.dimensions:
-                                dimension_scores[dim].append(
-                                    result.dimensions[dim]["score"]
-                                )
+                # Analyze political dimensions
+                result = analyzer.analyze_political_dimensions(text)
+
+                # Check quality threshold
+                if result.analysis_quality <= quality_threshold:
+                    stats["posts_low_quality"] += 1
+                    if verbose and len(stats["filtered_examples"]) < 3:
+                        stats["filtered_examples"].append(
+                            {
+                                "title": (
+                                    post.title[:50] + "..."
+                                    if len(post.title) > 50
+                                    else post.title
+                                ),
+                                "reason": f"Low quality score ({result.analysis_quality:.2f} < {quality_threshold})",
+                                "quality": result.analysis_quality,
+                            }
+                        )
+                    continue
+
+                # Post passed all filters
+                stats["posts_analyzed"] += 1
+                analyses.append(
+                    {
+                        "economic": result.dimensions.get("economic", {}),
+                        "social": result.dimensions.get("social", {}),
+                        "governance": result.dimensions.get("governance", {}),
+                        "analysis_quality": result.analysis_quality,
+                        "topics": result.dominant_topics,
+                    }
+                )
+
+                # Collect scores for aggregation
+                for dim in ["economic", "social", "governance"]:
+                    if dim in result.dimensions:
+                        dimension_scores[dim].append(result.dimensions[dim]["score"])
 
             progress.update(task, description="Calculating political diversity...")
 
@@ -850,6 +902,8 @@ def analyze_dimensions(
         start_date,
         end_date,
         analyzer,
+        stats,
+        verbose,
     )
 
     # Save to database if requested
@@ -1001,13 +1055,33 @@ def _display_political_dimensions_analysis(
     start_date: datetime,
     end_date: datetime,
     analyzer: PoliticalDimensionsAnalyzer,
+    stats: Dict[str, Any],
+    verbose: bool,
 ):
     """Display political dimensions analysis results."""
     console.print(f"\n[bold]Political Dimensions Analysis for r/{subreddit}[/bold]")
     console.print(
         f"Period: {start_date.strftime('%Y-%m-%d')} to {end_date.strftime('%Y-%m-%d')}"
     )
-    console.print(f"Posts analyzed: {len(analyses)}\n")
+
+    # Display filtering statistics
+    console.print(f"Posts fetched: {stats['total_posts']}")
+    console.print(f"Posts analyzed: {stats['posts_analyzed']}")
+
+    if stats["posts_too_short"] > 0 or stats["posts_low_quality"] > 0:
+        console.print("\n[yellow]Filtered out:[/yellow]")
+        if stats["posts_too_short"] > 0:
+            console.print(f"  - Text too short: {stats['posts_too_short']} posts")
+        if stats["posts_low_quality"] > 0:
+            console.print(f"  - Low quality score: {stats['posts_low_quality']} posts")
+
+    if verbose and stats["filtered_examples"]:
+        console.print("\n[dim]Example filtered posts:[/dim]")
+        for example in stats["filtered_examples"][:3]:
+            console.print(f'  • "{example["title"]}"')
+            console.print(f"    Reason: {example['reason']}")
+
+    console.print()
 
     # Dimension averages
     table = Table(title="Average Political Positions", show_header=True)

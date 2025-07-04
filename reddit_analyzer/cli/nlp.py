@@ -3,10 +3,17 @@
 import typer
 from rich.console import Console
 from rich.table import Table
-from rich.progress import Progress
+from rich.progress import (
+    Progress,
+    SpinnerColumn,
+    TextColumn,
+    BarColumn,
+    TaskProgressColumn,
+)
 from typing import Optional
 from datetime import datetime
 from sqlalchemy import func
+import logging
 
 from reddit_analyzer.cli.utils.auth_manager import cli_auth
 from reddit_analyzer.models.post import Post
@@ -18,6 +25,7 @@ from reddit_analyzer.services.nlp_service import get_nlp_service
 
 nlp_app = typer.Typer(help="NLP analysis commands")
 console = Console()
+logger = logging.getLogger(__name__)
 
 
 @nlp_app.command("analyze")
@@ -444,19 +452,90 @@ def analyze_emotions(
                 console.print(f"❌ Subreddit r/{subreddit} not found", style="red")
                 raise typer.Exit(1)
 
-            # Get posts with emotion analysis
-            analyses = (
+            # Get all text analyses for this subreddit
+            all_analyses = (
                 db.query(TextAnalysis)
                 .join(Post)
                 .filter(Post.subreddit_id == subreddit_obj.id)
-                .filter(TextAnalysis.emotions.isnot(None))
                 .limit(1000)
                 .all()
             )
 
+            if not all_analyses:
+                console.print(f"📭 No posts found for r/{subreddit}", style="yellow")
+                return
+
+            # Check which analyses have emotion data
+            analyses_with_emotions = []
+            analyses_without_emotions = []
+
+            for analysis in all_analyses:
+                if analysis.emotion_scores and any(analysis.emotion_scores.values()):
+                    analyses_with_emotions.append(analysis)
+                else:
+                    analyses_without_emotions.append(analysis)
+
+            # If we have analyses without emotions, analyze them now
+            if analyses_without_emotions:
+                console.print(
+                    f"🔄 Analyzing emotions for {len(analyses_without_emotions)} posts..."
+                )
+
+                from reddit_analyzer.processing.emotion_analyzer import EmotionAnalyzer
+
+                emotion_analyzer = EmotionAnalyzer()
+
+                with Progress(
+                    SpinnerColumn(),
+                    TextColumn("[progress.description]{task.description}"),
+                    BarColumn(),
+                    TaskProgressColumn(),
+                    console=console,
+                ) as progress:
+                    task = progress.add_task(
+                        "Analyzing emotions...", total=len(analyses_without_emotions)
+                    )
+
+                    for analysis in analyses_without_emotions:
+                        try:
+                            # Get the post text
+                            post = (
+                                db.query(Post)
+                                .filter(Post.id == analysis.post_id)
+                                .first()
+                            )
+                            if post:
+                                text = f"{post.title} {post.selftext or ''}"
+                                emotions = emotion_analyzer.analyze_emotions(text)
+
+                                # Update the analysis with emotion scores
+                                analysis.emotion_scores = emotions
+                                analyses_with_emotions.append(analysis)
+
+                            progress.update(task, advance=1)
+                        except Exception as e:
+                            logger.warning(
+                                f"Failed to analyze emotions for post {analysis.post_id}: {e}"
+                            )
+                            progress.update(task, advance=1)
+
+                # Commit the updates
+                try:
+                    db.commit()
+                    console.print(
+                        f"✅ Emotion analysis complete for {len(analyses_without_emotions)} posts"
+                    )
+                except Exception as e:
+                    logger.error(f"Failed to save emotion analysis: {e}")
+                    db.rollback()
+
+            # Use all analyses that now have emotions
+            analyses = analyses_with_emotions
+
             if not analyses:
                 console.print(
-                    f"📭 No emotion analysis found for r/{subreddit}", style="yellow"
+                    f"📭 No emotion analysis could be performed for r/{subreddit}",
+                    style="yellow",
                 )
                 return
 
@@ -505,7 +584,9 @@ def analyze_emotions(
             most_emotional = []
             for analysis in analyses:
                 if analysis.emotion_scores:
-                    max_emotion = max(analysis.emotions.items(), key=lambda x: x[1])
+                    max_emotion = max(
+                        analysis.emotion_scores.items(), key=lambda x: x[1]
+                    )
                     if max_emotion[1] > 0.7:  # High intensity
                         post = (
                             db.query(Post).filter(Post.id == analysis.post_id).first()

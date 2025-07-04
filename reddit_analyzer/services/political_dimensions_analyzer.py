@@ -65,10 +65,16 @@ class PoliticalDimensionsAnalyzer:
                 "evidence": evidence,  # Key phrases/topics that influenced score
                 "label": dimension.get_label(score),  # Human-readable position
             }
-            confidence_scores.append(confidence)
+            # Only include dimensions with actual detections in quality calculation
+            if confidence > 0:
+                confidence_scores.append(confidence)
 
-        # Calculate overall quality
-        analysis_quality = np.mean(confidence_scores) if confidence_scores else 0.0
+        # Calculate overall quality - average only dimensions with detections
+        if confidence_scores:
+            analysis_quality = np.mean(confidence_scores)
+        else:
+            # No dimensions detected anything - give minimal quality
+            analysis_quality = 0.05
 
         return PoliticalAnalysisResult(
             dimensions=results,
@@ -193,7 +199,7 @@ class EconomicDimension(BaseDimension):
         total = market_score + planned_score
         if total > 0:
             position = (market_score - planned_score) / total
-            confidence = min(total / 10.0, 1.0)  # Confidence based on evidence strength
+            confidence = min(total / 3.0, 1.0)  # Confidence based on evidence strength
         else:
             position = 0.0
             confidence = 0.0
@@ -293,7 +299,7 @@ class SocialDimension(BaseDimension):
         total = liberty_score + authority_score
         if total > 0:
             position = (authority_score - liberty_score) / total
-            confidence = min(total / 10.0, 1.0)
+            confidence = min(total / 3.0, 1.0)
         else:
             position = 0.0
             confidence = 0.0
@@ -396,7 +402,7 @@ class GovernanceDimension(BaseDimension):
         total = decentralized_score + centralized_score
         if total > 0:
             position = (centralized_score - decentralized_score) / total
-            confidence = min(total / 10.0, 1.0)
+            confidence = min(total / 3.0, 1.0)
         else:
             position = 0.0
             confidence = 0.0

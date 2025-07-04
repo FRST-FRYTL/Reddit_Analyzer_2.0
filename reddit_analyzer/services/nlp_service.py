@@ -14,6 +14,7 @@ from reddit_analyzer.processing.sentiment_analyzer import SentimentAnalyzer
 from reddit_analyzer.processing.topic_modeler import TopicModeler
 from reddit_analyzer.processing.feature_extractor import FeatureExtractor
 from reddit_analyzer.processing.text_processor import TextProcessor
+from reddit_analyzer.processing.emotion_analyzer import EmotionAnalyzer
 from reddit_analyzer.models import Post, TextAnalysis
 from reddit_analyzer.database import SessionLocal
 from pathlib import Path
@@ -30,6 +31,7 @@ class NLPService:
     _topic_modeler = None
     _feature_extractor = None
     _text_processor = None
+    _emotion_analyzer = None
 
     def __new__(cls):
         """Implement singleton pattern for model caching."""
@@ -77,6 +79,14 @@ class NLPService:
             logger.info("Loading text processor...")
             NLPService._text_processor = TextProcessor()
         return NLPService._text_processor
+
+    @property
+    def emotion_analyzer(self) -> EmotionAnalyzer:
+        """Lazy-load emotion analyzer."""
+        if NLPService._emotion_analyzer is None:
+            logger.info("Loading emotion analyzer...")
+            NLPService._emotion_analyzer = EmotionAnalyzer()
+        return NLPService._emotion_analyzer
 
     def analyze_text(
         self, text: str, post_id: Optional[str] = None, comment_id: Optional[str] = None
@@ -137,8 +147,12 @@ class NLPService:
                 except Exception as e:
                     logger.warning(f"Topic prediction failed: {e}")
 
-            # Emotion detection (from sentiment analyzer)
-            emotions = sentiment_result.get("emotions", {})
+            # Emotion detection using dedicated emotion analyzer
+            try:
+                emotions = self.emotion_analyzer.analyze_emotions(text)
+            except Exception as e:
+                logger.warning(f"Emotion analysis failed: {e}")
+                emotions = {}
 
             processing_time = time.time() - start_time
 

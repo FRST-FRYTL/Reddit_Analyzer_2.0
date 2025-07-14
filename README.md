@@ -1,10 +1,52 @@
-# Reddit Analyzer
+# Reddit Analyzer v2.0
 
 A comprehensive data analysis application for collecting, processing, and analyzing Reddit data using the Reddit API.
 
-> 🚀 **Phase 5 Update**: Advanced NLP capabilities with heavy model support for emotion detection, stance analysis, entity extraction, and argument mining. See [Advanced NLP Features](#advanced-nlp-features) section below.
+> 🎉 **Version 2.0 Released**: Major update with advanced NLP capabilities, enhanced political analysis, and a roadmap for cloud-based architecture and advanced visualizations.
+>
+> 🚀 **Phase 5 Complete**: Advanced NLP with heavy model support for emotion detection, stance analysis, entity extraction, and argument mining. See [Advanced NLP Features](#advanced-nlp-features) section below.
 >
 > 📊 **Phase 4D Features**: Political analysis with topic detection, multi-dimensional analysis, and discussion quality metrics. See [Political Analysis](#political-analysis) section.
+
+## What's New in v2.0
+
+- ✅ **Advanced NLP Integration**: State-of-the-art transformer models for deep text analysis
+- ✅ **Enhanced Political Analysis**: Multi-dimensional political compass with discussion quality metrics
+- ✅ **Real-time Data Collection**: Improved Reddit API integration with comment depth control
+- ✅ **Comprehensive CLI**: Rich terminal interface with ASCII visualizations
+- ✅ **Authentication System**: JWT-based auth with role-based access control
+- ✅ **Extensive Test Suite**: Real data testing with golden output validation
+
+## Roadmap: Future Development
+
+### 🌐 Cloud-Based Architecture (v2.1)
+- **Distributed Database**: Migration to cloud-native database solutions (AWS RDS/Aurora, Google Cloud SQL)
+- **Scalable Processing**: Kubernetes-based microservices for horizontal scaling
+- **Real-time Streaming**: Apache Kafka/AWS Kinesis for live Reddit data ingestion
+- **Global CDN**: Multi-region deployment for worldwide accessibility
+- **Auto-scaling**: Dynamic resource allocation based on processing demands
+
+### 📊 Advanced Visualization Features (v2.2)
+- **Interactive Web Dashboard**: Real-time analytics with D3.js/Plotly visualizations
+- **Network Analysis**: Community relationship graphs and user interaction networks
+- **Temporal Heatmaps**: Activity patterns across time zones and days
+- **3D Political Compass**: Interactive multi-dimensional political positioning
+- **Sentiment Flow**: Animated sentiment changes over discussion threads
+- **Topic Evolution**: Dynamic topic modeling visualization over time
+- **Export Capabilities**: High-resolution charts for publications and presentations
+
+### 🤖 AI-Powered Insights (v2.3)
+- **Predictive Analytics**: Trend forecasting and viral content prediction
+- **Automated Report Generation**: AI-written summaries of community trends
+- **Anomaly Detection**: Real-time identification of unusual activity patterns
+- **Cross-platform Analysis**: Integration with Twitter, Discord, and other platforms
+
+### 🔧 Infrastructure Improvements (v2.4)
+- **GraphQL API**: Modern API for flexible data queries
+- **WebSocket Support**: Real-time updates for live monitoring
+- **Data Lake Integration**: Long-term storage with AWS S3/Google Cloud Storage
+- **ML Pipeline**: Automated model training and deployment
+- **Monitoring & Observability**: Prometheus, Grafana, and distributed tracing
 
 ## Features
 
